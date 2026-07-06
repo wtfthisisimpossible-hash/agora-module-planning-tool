@@ -1,0 +1,2433 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AGORA組合沙發平面配置工具</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Microsoft JhengHei", "PingFang TC", sans-serif; font-size: 14px; color: #1a1a1a; background: #f0ede8; }
+
+.app { display: flex; height: 100vh; border: 2px solid #888; overflow: hidden; }
+
+.panel {
+  width: 250px; min-width: 250px;
+  background: #f7f5f2;
+  border-right: 2px solid #888;
+  padding: 14px 12px;
+  display: flex; flex-direction: column; gap: 14px;
+  overflow-y: auto;
+}
+.panel-title {
+  font-size: 15px; font-weight: bold;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #888;
+}
+.section-title {
+  font-size: 11px; font-weight: bold;
+  color: #555; letter-spacing: 0.03em;
+  margin-bottom: 5px;
+}
+.section { display: flex; flex-direction: column; gap: 6px; }
+
+/* 客製化下拉選單樣式 */
+.custom-select {
+  position: relative;
+  width: 100%;
+}
+.custom-select-trigger {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1.5px solid #888;
+  border-radius: 5px;
+  background: #fff;
+  color: #1a1a1a;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+}
+.custom-select-trigger::after {
+  content: '▼';
+  font-size: 9px;
+  color: #666;
+  transition: transform 0.15s ease;
+}
+.custom-select.open .custom-select-trigger::after {
+  transform: rotate(180deg);
+}
+.custom-select-options {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1.5px solid #888;
+  border-radius: 5px;
+  margin-top: 4px;
+  max-height: 260px;
+  overflow-y: auto;
+  z-index: 100;
+  display: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.custom-select.open .custom-select-options {
+  display: block;
+}
+.custom-option {
+  padding: 6px 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 0.1s ease;
+}
+.custom-option:hover {
+  background: #eef5fc;
+}
+.custom-option.selected {
+  background: #e1f0fe;
+  font-weight: bold;
+}
+.custom-option-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  background: #fcfcfc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.custom-option-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.custom-option-name {
+  font-size: 12px;
+  color: #1a1a1a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Trigger 內的預覽內容 */
+.trigger-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.trigger-icon {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #ccc;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.trigger-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.btn {
+  padding: 7px 12px;
+  border: 1.5px solid #888;
+  border-radius: 5px;
+  background: #fff;
+  color: #1a1a1a;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+.btn:hover { background: #eef5fc; border-color: #1a6fc4; color: #1a6fc4; }
+.btn:active { transform: scale(0.97); }
+.btn-row { display: flex; gap: 6px; }
+.btn-row .btn { flex: 1; }
+.btn-danger:hover { border-color: #c0392b; background: #fdf0ee; color: #c0392b; }
+
+.divider { border: none; border-top: 1.5px solid #bbb; }
+.hint { font-size: 11px; color: #777; line-height: 1.5; }
+
+.canvas-area { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+.canvas-header {
+  padding: 10px 14px;
+  font-size: 13px; font-weight: bold;
+  color: #444;
+  border-bottom: 2px solid #888;
+  background: #f7f5f2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+
+/*畫布網格改變*/
+.canvas {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background-color: #fcfcfc;
+  background-image:
+    radial-gradient(circle, #a9a9a9 2px, transparent 2px),
+    radial-gradient(circle, #ccc 1.5px, transparent 1.5px);
+  background-size:
+    calc(100px * var(--zoom, 1)) calc(100px * var(--zoom, 1)),
+    calc(20px  * var(--zoom, 1)) calc(20px  * var(--zoom, 1));
+  background-position: 0 0, 0 0;
+  border-bottom: 2px solid #888;
+  touch-action: none; /* 阻止瀏覽器原生縮放/捲動，讓自訂手勢完整接管 */
+}
+
+/* 多選模式啟用時按鈕高亮 */
+.btn.multiselect-active {
+  border-color: #e67e22 !important;
+  color: #e67e22 !important;
+  background: #fff8f3;
+}
+
+.empty-hint {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: #aaa; font-size: 13px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.list-area { background: #f7f5f2;min-height: 300px ;max-height: 400px; overflow-y: auto; }
+
+.list-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 12px;
+  border-bottom: 1.5px solid #888;
+  background: #eeebe6;
+  position: sticky; top: 0; z-index: 2;
+}
+.list-header span { font-size: 12px; font-weight: bold; color: #444; }
+
+table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+col.col-name  { width: 17%; }
+col.col-id    { width: 15%; }
+col.col-spec  { width: 14%; }
+col.col-qty   { width: 6%; }
+col.col-color { width: 14%; }
+col.col-note  { width: 21%; }
+
+th {
+  background: #eeebe6;
+  color: #555;
+  font-weight: bold;
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1.5px solid #888;
+}
+td {
+  padding: 5px 8px;
+  border-bottom: 1px solid #ddd;
+  color: #1a1a1a;
+  vertical-align: middle;
+}
+tr:hover td { background: #eef5fc; }
+td:not(:last-child), th:not(:last-child) { border-right: 1px solid #ddd; }
+
+.note-cell textarea {
+  width: 100%; min-height: 30px;
+  border: 1px solid #ccc; border-radius: 3px;
+  background: #fff; color: #1a1a1a;
+  font-size: 12px; line-height: 1.4;
+  padding: 4px 6px; resize: vertical;
+  outline: none;
+}
+.note-cell textarea:focus { border-color: #1a6fc4; box-shadow: 0 0 0 2px #cde4f7; }
+
+/* 配置清單：椅背 / 坐墊 顏色選擇器 */
+.color-cell { text-align: left; }
+.color-cell > td { vertical-align: middle; }
+/* 讓色票與填入框在同一行對齊 */
+.color-cell { display: table-cell; }
+.color-cell-inner { display: flex; align-items: center; gap: 5px; }
+.color-select { position: relative; display: inline-block; flex-shrink: 0; }
+.color-swatch-btn {
+  width: 26px; height: 26px;
+  border: 1.5px solid #888;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+  display: block;
+}
+.color-swatch-btn:hover { border-color: #1a6fc4; }
+.color-swatch-btn.no-color {
+  background: linear-gradient(to top right, transparent calc(50% - 0.75px), #e2231a calc(50% - 0.75px), #e2231a calc(50% + 0.75px), transparent calc(50% + 0.75px));
+}
+.color-swatch-btn:disabled {
+  cursor: not-allowed;
+}
+.color-swatch-btn:disabled:hover {
+  border-color: #888;
+}
+.color-popup {
+  position: absolute;
+  top: 100%; left: 0;
+  margin-top: 4px;
+  background: #fff;
+  border: 1.5px solid #888;
+  border-radius: 5px;
+  padding: 6px;
+  display: none;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  z-index: 200;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.color-select.open .color-popup { display: grid; }
+.color-swatch-option {
+  width: 20px; height: 20px;
+  border-radius: 3px;
+  border: 1.5px solid #ccc;
+  cursor: pointer;
+  padding: 0;
+}
+.color-swatch-option:hover { border-color: #1a6fc4; }
+.color-swatch-option.selected { border-color: #1a6fc4; box-shadow: 0 0 0 2px #cde4f7; }
+/* 布號填入框 */
+.fabric-label-input {
+  width: 72px;
+  padding: 2px 5px;
+  border: 1px solid #bbb;
+  border-radius: 3px;
+  background: #f0f0f0;
+  color: #888;
+  font-size: 11px;
+  font-family: inherit;
+  line-height: 1.4;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.fabric-label-input:focus {
+  outline: none;
+  border-color: #1a6fc4;
+  background: #fff;
+  color: #1a1a1a;
+}
+.fabric-label-input::placeholder { color: #aaa; font-size: 10px; }
+/* 彙整模式布號純文字顯示 */
+.fabric-label-text {
+  font-size: 11px;
+  color: #555;
+  background: #f0f0f0;
+  padding: 1px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+  vertical-align: middle;
+  margin-left: 3px;
+}
+
+/* 模塊樣式：完美相容 html2canvas 與拖拽效果 */
+.sofa-module {
+  position: absolute;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  box-sizing: content-box;
+}
+.sofa-module:active { cursor: grabbing; }
+.sofa-module img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+/* 選取狀態指示器 */
+.sofa-module.selected::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border: 2.5px solid #1a6fc4;
+  border-radius: 4px;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px #fff, 0 4px 10px rgba(26,111,196,0.3);
+  z-index: 10;
+}
+
+/* 框選矩形樣式 */
+#selection-rect {
+  position: absolute;
+  border: 2px dashed #1a6fc4;
+  background: rgba(26, 111, 196, 0.08);
+  pointer-events: none;
+  display: none;
+  z-index: 50;
+  box-sizing: border-box;
+}
+
+/* 畫布縮放容器：只有模塊在此層，框選/提示不受縮放影響 */
+#canvas-viewport {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  transform-origin: top left;
+}
+
+/* 多選高亮：覆蓋單選樣式 */
+.sofa-module.multi-selected::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border: 2.5px solid #e67e22;
+  border-radius: 4px;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px #fff, 0 4px 10px rgba(230,126,34,0.3);
+  z-index: 10;
+}
+
+/* 配置清單多選高亮行 */
+tr.multi-selected-row td {
+  background: #fff3e0 !important;
+}
+
+/* 吐司通知樣式 */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 13px;
+  z-index: 9999;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: none;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="panel">
+    <div class="panel-title">Agora沙發模塊</div>
+
+    <div class="section">
+      <div class="section-title">直行模塊</div>
+      <div class="custom-select" id="straight-custom-select">
+        <div class="custom-select-trigger" onclick="event.stopPropagation(); toggleSelect('straight')">
+          <div class="trigger-content" id="straight-trigger-content">
+            <span>選擇直行模塊</span>
+          </div>
+        </div>
+        <div class="custom-select-options" id="straight-options-list"></div>
+      </div>
+      <select id="straight-select" style="display: none;"></select>
+      <button class="btn" onclick="insertModule('straight')">插入直行模塊</button>
+    </div>
+
+    <hr class="divider">
+
+    <div class="section">
+      <div class="section-title">轉角模塊</div>
+      <div class="custom-select" id="corner-custom-select">
+        <div class="custom-select-trigger" onclick="event.stopPropagation(); toggleSelect('corner')">
+          <div class="trigger-content" id="corner-trigger-content">
+            <span>選擇轉角模塊</span>
+          </div>
+        </div>
+        <div class="custom-select-options" id="corner-options-list"></div>
+      </div>
+      <select id="corner-select" style="display: none;"></select>
+      <button class="btn" onclick="insertModule('corner')">插入轉角模塊</button>
+    </div>
+
+    <hr class="divider">
+
+    <div class="section">
+      <div class="section-title">其他模塊</div>
+      <div class="custom-select" id="other-custom-select">
+        <div class="custom-select-trigger" onclick="event.stopPropagation(); toggleSelect('other')">
+          <div class="trigger-content" id="other-trigger-content">
+            <span>選擇其他模塊</span>
+          </div>
+        </div>
+        <div class="custom-select-options" id="other-options-list"></div>
+      </div>
+      <select id="other-select" style="display: none;"></select>
+      <button class="btn" onclick="insertModule('other')">插入其他模塊</button>
+    </div>
+
+    <hr class="divider">
+
+    <div class="section">
+      <div class="section-title">旋轉模塊</div>
+      <div class="btn-row">
+        <button class="btn" onclick="rotateSelected(-15)">↺ 15°逆時針</button>
+        <button class="btn" onclick="rotateSelected(15)">↻ 15°順時針</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn" onclick="rotateSelected(-45)">↺ 45°逆時針</button>
+        <button class="btn" onclick="rotateSelected(45)">↻ 45°順時針</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn" onclick="rotateSelected(-180)"> 旋轉180°</button>
+      </div>
+
+
+      <p class="hint">點擊畫布中的模塊進行選取，再執行旋轉或微調。</p>
+    </div>
+
+    <hr class="divider">
+
+    <div class="section">
+      <div class="section-title">多選模式（iPad）</div>
+      <button class="btn" id="multiselect-mode-btn" onclick="toggleMultiSelectMode()">☑ 多選模式：關閉</button>
+      <p class="hint">開啟後點擊模塊可累積加選；再次點擊已選取的模塊則取消。</p>
+    </div>
+
+    <hr class="divider">
+
+    <div class="section">
+      <button class="btn btn-danger" onclick="deleteSelected()">刪除選取模塊</button>
+      <button class="btn btn-danger" onclick="clearCanvas()">清空配置</button>
+    </div>
+  </div>
+
+  <div class="canvas-area">
+    <div class="canvas-header">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span>AGORA 2D 配置區</span>
+        <button class="btn" style="padding: 4px 12px; font-size: 12px; font-weight: bold; border-color: #3a8a3a; color: #3a8a3a;" onclick="saveProject()" title="將目前配置儲存為 .agora 專案檔">💾 儲存專案</button>
+        <label class="btn" style="padding: 4px 12px; font-size: 12px; font-weight: bold; border-color: #3a8a3a; color: #3a8a3a; cursor: pointer; margin: 0;" title="載入先前儲存的 .agora 專案檔">📂 載入專案<input type="file" id="loadProjectInput" accept=".agora" style="display:none;" onchange="loadProject(event)"></label>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div style="display:flex; align-items:center; gap:4px;">
+          <button class="btn" style="padding:3px 9px; font-size:14px; font-weight:bold; line-height:1;" onclick="setZoom(canvasZoom - 0.1)" title="縮小">－</button>
+          <span id="zoom-label" style="font-size:12px; color:#555; min-width:38px; text-align:center; user-select:none;">100%</span>
+          <button class="btn" style="padding:3px 9px; font-size:14px; font-weight:bold; line-height:1;" onclick="setZoom(canvasZoom + 0.1)" title="放大">＋</button>
+          <button class="btn" style="padding:3px 9px; font-size:12px;" onclick="centerModulesGroup()" title="將所有模塊群組移動到畫布中心">模塊置中</button>
+          <button class="btn" style="padding:3px 9px; font-size:12px;" onclick="resetView()" title="重置縮放與平移">重置</button>
+        </div>
+        <button class="btn" style="padding: 4px 12px; font-size: 12px; font-weight: bold; border-color: #1a6fc4; color: #1a6fc4;" onclick="captureCanvas()">📷 擷取配置圖</button>
+      </div>
+    </div>
+    
+    <div class="canvas" id="canvas" onclick="handleCanvasClick(event)">
+      <div class="empty-hint" id="empty-hint">請由左側選擇模塊並點擊「插入模塊」開始設計</div>
+      <div id="canvas-viewport"></div>
+      <div id="selection-rect"></div>
+    </div>
+
+    <div class="list-area">
+      <div class="list-header">
+        <span>配置清單</span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button class="btn" id="aggregateBtn" style="padding: 4px 12px; font-size: 12px;" onclick="toggleAggregate()">🧮 彙整型號</button>
+          <button class="btn" style="padding: 4px 12px; font-size: 12px;" onclick="exportCSV()">📁 匯出 CSV</button>
+        </div>
+      </div>
+      <table>
+        <colgroup>
+          <col class="col-name">
+          <col class="col-id">
+          <col class="col-spec">
+          <col class="col-qty">
+          <col class="col-color">
+          <col class="col-color">
+          <col class="col-note">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>模塊名稱</th>
+            <th>型號</th>
+            <th>規格 (mm)</th>
+            <th>數量</th>
+            <th>椅背顏色</th>
+            <th>坐墊顏色</th>
+            <th>註記</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">已成功複製與下載</div>
+
+<script>
+// ==========================================
+// 1. 模組定義與 SVG 空格保留處
+// ==========================================
+const CUSTOM_SVG = {
+  "SP-17-1TSBS": `<svg width="100%" height="100%" viewBox="0 0 414 414" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板1" x="0" y="0" width="413.386" height="413.386" style="fill:none;"/><clipPath id="clip_1TSBS">
+<rect x="0" y="0" width="413.386" height="413.386"/></clipPath><g clip-path="url(#clip_1TSBS)">
+<path d="M413.386,17.717l0,377.953c0,9.778 -7.939,17.717 -17.717,17.717l-377.953,0c-9.778,0 -17.717,-7.939 -17.717,-17.717l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l377.953,0c9.778,0 17.717,7.939 17.717,17.717Z" style="fill:#f2af0d;"/><path d="M413.386,17.717l0,377.953c0,9.778 -7.939,17.717 -17.717,17.717l-377.953,0c-9.778,0 -17.717,-7.939 -17.717,-17.717l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l377.953,0c9.778,0 17.717,7.939 17.717,17.717Zm-4.167,-0c0,-7.478 -6.071,-13.55 -13.55,-13.55l-377.953,0c-7.483,0 -13.55,6.071 -13.55,13.55l0,377.953c0,7.478 6.071,13.55 13.55,13.55l377.953,0c7.483,0 13.55,-6.071 13.55,-13.55l0,-377.953Z"/><path d="M413.386,17.717l0,100.394l-413.386,0l0,-100.394c0,-9.778 7.939,-17.717 17.717,-17.717l377.953,0c9.778,0 17.717,7.939 17.717,17.717Z" style="fill:#c0c0c0;"/><path d="M413.386,17.717l0,100.394l-413.386,0l0,-100.394c0,-9.778 7.939,-17.717 17.717,-17.717l377.953,0c9.778,0 17.717,7.939 17.717,17.717Zm-4.167,-0c0,-7.478 -6.071,-13.55 -13.55,-13.55l-377.953,0c-7.478,0 -13.55,6.071 -13.55,13.55l0,96.227l405.052,-0l0,-96.227Z"/><g><rect x="0" y="64.961" width="11.811" height="47.244"/><rect x="401.575" y="64.961" width="11.811" height="47.244"/><rect x="0" y="301.181" width="11.811" height="47.244"/><rect x="401.575" y="301.181" width="11.811" height="47.244"/></g></g></svg>`,
+  "SP-17-1TRBS": `<svg width="100%" height="100%" viewBox="0 0 414 414" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板2" x="0" y="0" width="413.386" height="413.386" style="fill:none;"/><clipPath id="clip_1TRBS">
+<rect x="0" y="0" width="413.386" height="413.386"/></clipPath><g clip-path="url(#clip_1TRBS)">
+<path d="M413.386,17.717l0,377.953c0,9.778 -7.939,17.717 -17.717,17.717l-377.953,0c-9.778,0 -17.717,-7.939 -17.717,-17.717l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l377.953,0c9.778,0 17.717,7.939 17.717,17.717Z" style="fill:#f2af0d;"/><path d="M413.386,17.717l0,377.953c0,9.778 -7.939,17.717 -17.717,17.717l-377.953,0c-9.778,0 -17.717,-7.939 -17.717,-17.717l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l377.953,0c9.778,0 17.717,7.939 17.717,17.717Zm-4.167,0c0,-7.478 -6.071,-13.55 -13.55,-13.55l-377.953,0c-7.478,0 -13.55,6.071 -13.55,13.55l0,377.953c0,7.478 6.071,13.55 13.55,13.55l377.953,0c7.483,0 13.55,-6.071 13.55,-13.55l0,-377.953Z"/><path d="M0,395.669l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l377.953,0c9.785,0 17.717,7.939 17.717,17.717l0,100.394l-295.276,-0l0,295.276l-100.394,0c-9.778,0 -17.717,-7.939 -17.717,-17.717Z" style="fill:#c0c0c0;"/><path d="M0,395.669l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l377.953,0c9.778,0 17.717,7.939 17.717,17.717l0,100.394l-295.276,-0l0,295.276l-100.394,0c-9.778,0 -17.717,-7.939 -17.717,-17.717Zm4.167,-0c0,7.478 6.071,13.55 13.55,13.55l96.227,0l0,-291.109c0,-2.301 1.865,-4.167 4.167,-4.167l291.109,-0l0,-96.227c0,-7.478 -6.071,-13.55 -13.55,-13.55l-377.953,0c-7.478,0 -13.55,6.071 -13.55,13.55l0,377.953Z"/><rect x="0" y="64.961" width="11.811" height="47.244"/><rect x="401.575" y="64.961" width="11.811" height="47.244"/><rect x="0" y="301.181" width="11.811" height="47.244"/><rect x="401.575" y="301.181" width="11.811" height="47.244"/></g></svg>`,
+  "SP-17-2TSBS": `<svg width="100%" height="100%" viewBox="0 0 827 414" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板3" x="0" y="0" width="826.772" height="413.386" style="fill:none;"/><clipPath id="clip_2TSB">
+<rect x="0" y="0" width="826.772" height="413.386"/></clipPath><g clip-path="url(#clip_2TSB)">
+<path d="M826.772,17.717l0,377.953c0,9.778 -7.939,17.717 -17.717,17.717l-791.339,0c-9.778,0 -17.717,-7.939 -17.717,-17.717l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l791.339,0c9.778,0 17.717,7.939 17.717,17.717Z" style="fill:#f2af0d;"/><path d="M826.772,17.717l0,377.953c0,9.778 -7.939,17.717 -17.717,17.717l-791.339,0c-9.778,0 -17.717,-7.939 -17.717,-17.717l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l791.339,0c9.778,0 17.717,7.939 17.717,17.717Zm-4.167,0c0,-7.478 -6.071,-13.55 -13.55,-13.55l-791.339,0c-7.478,0 -13.55,6.071 -13.55,13.55l0,377.953c0,7.478 6.071,13.55 13.55,13.55l791.339,0c7.478,0 13.55,-6.071 13.55,-13.55l0,-377.953Z"/><path d="M826.772,17.717l0,100.394l-826.772,0l0,-100.394c0,-9.778 7.939,-17.717 17.717,-17.717l791.339,0c9.778,0 17.717,7.939 17.717,17.717Z" style="fill:#c0c0c0;"/><path d="M826.772,17.717l0,100.394l-826.772,0l0,-100.394c0,-9.778 7.939,-17.717 17.717,-17.717l791.339,0c9.778,0 17.717,7.939 17.717,17.717Zm-4.167,0c0,-7.478 -6.071,-13.55 -13.55,-13.55l-791.339,0c-7.478,0 -13.55,6.071 -13.55,13.55l0,96.227l818.438,-0l0,-96.227Z"/><rect x="0" y="64.961" width="11.811" height="47.244"/><rect x="814.961" y="64.961" width="11.811" height="47.244"/><rect x="0" y="301.181" width="11.811" height="47.244"/><rect x="814.961" y="301.181" width="11.811" height="47.244"/></g></svg>`,
+  "SP-17-2TRBS": `<svg width="100%" height="100%" viewBox="0 0 827 414" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板4" x="0" y="0" width="826.772" height="413.386" style="fill:none;"/><clipPath id="clip_2TRB_user">
+<rect x="0" y="0" width="826.772" height="413.386"/></clipPath><g clip-path="url(#clip_2TRB_user)">
+<path d="M826.772,17.717l0,377.953c0,9.778 -7.939,17.717 -17.717,17.717l-791.339,0c-9.778,0 -17.717,-7.939 -17.717,-17.717l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l791.339,0c9.778,0 17.717,7.939 17.717,17.717Z" style="fill:#f2af0d;"/><path d="M826.772,17.717l0,377.953c0,9.778 -7.939,17.717 -17.717,17.717l-791.339,0c-9.778,0 -17.717,-7.939 -17.717,-17.717l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l791.339,0c9.778,0 17.717,7.939 17.717,17.717Zm-4.167,0c0,-7.478 -6.071,-13.55 -13.55,-13.55l-791.339,0c-7.478,0 -13.55,6.071 -13.55,13.55l0,377.953c0,7.478 6.071,13.55 13.55,13.55l791.339,0c7.478,0 13.55,-6.071 13.55,-13.55l0,-377.953Z"/><path d="M0,395.669l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l791.339,0c9.778,0 17.717,7.939 17.717,17.717l0,100.394l-708.661,-0l0,295.276l-100.394,0c-9.778,0 -17.717,-7.939 -17.717,-17.717Z" style="fill:#c0c0c0;"/><path d="M0,395.669l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l791.339,0c9.778,0 17.717,7.939 17.717,17.717l0,100.394l-708.661,-0l0,295.276l-100.394,0c-9.778,0 -17.717,-7.939 -17.717,-17.717Zm4.167,-0c0,7.478 6.071,13.55 13.55,13.55l96.227,0l0,-291.109c0,-2.301 1.865,-4.167 4.167,-4.167l704.495,-0l0,-96.227c0,-7.478 -6.071,-13.55 -13.55,-13.55l-791.339,0c-7.478,0 -13.55,6.071 -13.55,13.55l0,377.953Z"/><rect x="-0" y="64.961" width="11.811" height="47.244"/><rect x="814.961" y="64.961" width="11.811" height="47.244"/><rect x="-0" y="301.181" width="11.811" height="47.244"/><rect x="814.961" y="301.181" width="11.811" height="47.244"/></g></svg>`,
+  "SP-17-1TNBS": `<svg width="100%" height="100%" viewBox="0 0 414 414" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板5" x="0" y="0" width="413.386" height="413.386" style="fill:none;"/><clipPath id="clip_1TNB">
+<rect x="0" y="0" width="413.386" height="413.386"/></clipPath><g clip-path="url(#clip_1TNB)">
+<path d="M413.386,17.717l0,377.953c0,9.778 -7.939,17.717 -17.717,17.717l-377.953,0c-9.778,0 -17.717,-7.939 -17.717,-17.717l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l377.953,0c9.778,0 17.717,7.939 17.717,17.717Z" style="fill:#f2af0d;"/><path d="M413.386,17.717l0,377.953c0,9.778 -7.939,17.717 -17.717,17.717l-377.953,0c-9.778,0 -17.717,-7.939 -17.717,-17.717l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l377.953,0c9.778,0 17.717,7.939 17.717,17.717Zm-4.167,-0c0,-7.478 -6.071,-13.55 -13.55,-13.55l-377.953,0c-7.478,0 -13.55,6.071 -13.55,13.55l0,377.953c0,7.478 6.071,13.55 13.55,13.55l377.953,0c7.483,0 13.55,-6.071 13.55,-13.55l0,-377.953Z"/><g><rect x="0" y="64.961" width="11.811" height="47.244"/><rect x="401.575" y="64.961" width="11.811" height="47.244"/><rect x="0" y="301.181" width="11.811" height="47.244"/><rect x="401.575" y="301.181" width="11.811" height="47.244"/></g></g></svg>`,
+  "SP-17-1TLBS": `<svg width="100%" height="100%" viewBox="0 0 414 414" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板6" x="0" y="0" width="413.386" height="413.386" style="fill:none;"/><clipPath id="clip_1TLB">
+<rect x="0" y="0" width="413.386" height="413.386"/></clipPath><g clip-path="url(#clip_1TLB)">
+<path d="M413.386,17.717l0,377.953c0,9.778 -7.939,17.717 -17.717,17.717l-377.953,0c-9.778,0 -17.717,-7.939 -17.717,-17.717l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l377.953,0c9.778,0 17.717,7.939 17.717,17.717Z" style="fill:#f2af0d;"/><path d="M413.386,17.717l0,377.953c0,9.778 -7.939,17.717 -17.717,17.717l-377.953,0c-9.778,0 -17.717,-7.939 -17.717,-17.717l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l377.953,0c9.778,0 17.717,7.939 17.717,17.717Zm-4.167,0c0,-7.478 -6.071,-13.55 -13.55,-13.55l-377.953,0c-7.478,0 -13.55,6.071 -13.55,13.55l0,377.953c0,7.478 6.071,13.55 13.55,13.55l377.953,0c7.478,0 13.55,-6.071 13.55,-13.55l0,-377.953Z"/><path d="M413.386,395.669l0,-377.953c0,-9.778 -7.939,-17.717 -17.717,-17.717l-377.953,-0c-9.778,0 -17.717,7.939 -17.717,17.717l0,100.394l295.276,-0l0,295.276l100.394,0c9.785,0 17.717,-7.939 17.717,-17.717Z" style="fill:#c0c0c0;"/><path d="M413.386,395.669c0,9.778 -7.939,17.717 -17.717,17.717l-100.394,0l0,-295.276l-295.276,0l0,-100.394c0,-9.778 7.939,-17.717 17.717,-17.717l377.953,-0c9.785,0 17.717,7.939 17.717,17.717l0,377.953Zm-4.167,0l0,-377.953c0,-7.478 -6.071,-13.55 -13.55,-13.55l-377.953,0c-7.478,0 -13.55,6.071 -13.55,13.55l-0,96.227l291.109,-0c2.301,-0 4.167,1.865 4.167,4.167l0,291.109l96.227,0c7.483,0 13.55,-6.071 13.55,-13.55Z"/><rect x="0" y="64.961" width="11.811" height="47.244"/><rect x="401.575" y="64.961" width="11.811" height="47.244"/><rect x="0" y="301.181" width="11.811" height="47.244"/><rect x="401.575" y="301.181" width="11.811" height="47.244"/></g></svg>`,
+  "SP-17-2TNBS": `<svg width="100%" height="100%" viewBox="0 0 827 414" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板7" x="0" y="0" width="826.772" height="413.386" style="fill:none;"/><clipPath id="clip_2TNB">
+<rect x="0" y="0" width="826.772" height="413.386"/></clipPath><g clip-path="url(#clip_2TNB)">
+<path d="M826.772,17.717l0,377.953c0,9.778 -7.939,17.717 -17.717,17.717l-791.339,0c-9.778,0 -17.717,-7.939 -17.717,-17.717l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l791.339,0c9.778,0 17.717,7.939 17.717,17.717Z" style="fill:#f2af0d;"/><path d="M826.772,17.717l0,377.953c0,9.778 -7.939,17.717 -17.717,17.717l-791.339,0c-9.778,0 -17.717,-7.939 -17.717,-17.717l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l791.339,0c9.778,0 17.717,7.939 17.717,17.717Zm-4.167,0c0,-7.478 -6.071,-13.55 -13.55,-13.55l-791.339,0c-7.478,0 -13.55,6.071 -13.55,13.55l0,377.953c0,7.478 6.071,13.55 13.55,13.55l791.339,0c7.478,0 13.55,-6.071 13.55,-13.55l0,-377.953Z"/><rect x="0" y="64.961" width="11.811" height="47.244"/><rect x="814.961" y="64.961" width="11.811" height="47.244"/><rect x="0" y="301.181" width="11.811" height="47.244"/><rect x="814.961" y="301.181" width="11.811" height="47.244"/></g></svg>`,
+  "SP-17-2TLBS": `<svg width="100%" height="100%" viewBox="0 0 827 414" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板8" x="0" y="0" width="826.772" height="413.386" style="fill:none;"/><clipPath id="clip_2TLB">
+<rect x="0" y="0" width="826.772" height="413.386"/></clipPath><g clip-path="url(#clip_2TLB)">
+<path d="M826.772,17.717l0,377.953c0,9.778 -7.939,17.717 -17.717,17.717l-791.339,0c-9.778,0 -17.717,-7.939 -17.717,-17.717l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l791.339,0c9.778,0 17.717,7.939 17.717,17.717Z" style="fill:#f2af0d;"/><path d="M826.772,17.717l0,377.953c0,9.778 -7.939,17.717 -17.717,17.717l-791.339,0c-9.778,0 -17.717,-7.939 -17.717,-17.717l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l791.339,0c9.778,0 17.717,7.939 17.717,17.717Zm-4.167,0c0,-7.478 -6.071,-13.55 -13.55,-13.55l-791.339,0c-7.478,0 -13.55,6.071 -13.55,13.55l0,377.953c0,7.478 6.071,13.55 13.55,13.55l791.339,0c7.478,0 13.55,-6.071 13.55,-13.55l0,-377.953Z"/><path d="M826.772,395.669l0,-377.953c0,-9.778 -7.939,-17.717 -17.717,-17.717l-791.339,-0c-9.778,0 -17.717,7.939 -17.717,17.717l0,100.394l708.661,-0l0,295.276l100.394,0c9.785,0 17.717,-7.939 17.717,-17.717Z" style="fill:#c0c0c0;"/><path d="M826.772,395.669c0,9.778 -7.939,17.717 -17.717,17.717l-100.394,0l0,-295.276l-708.661,0l0,-100.394c0,-9.778 7.939,-17.717 17.717,-17.717l791.339,-0c9.785,0 17.717,7.939 17.717,17.717l0,377.953Zm-4.167,0l0,-377.953c0,-7.478 -6.071,-13.55 -13.55,-13.55l-791.339,0c-7.478,0 -13.55,6.071 -13.55,13.55l-0,96.227l704.495,-0c2.301,-0 4.167,1.865 4.167,4.167l0,291.109l96.227,0c7.483,0 13.55,-6.071 13.55,-13.55Z"/><rect x="-0" y="64.961" width="11.811" height="47.244"/><rect x="814.961" y="64.961" width="11.811" height="47.244"/><rect x="-0" y="301.181" width="11.811" height="47.244"/><rect x="814.961" y="301.181" width="11.811" height="47.244"/></g></svg>`,
+  "SP-17-1.5TRBS": `<svg width="100%" height="100%" viewBox="0 0 621 414" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板9" x="0" y="0" width="620.079" height="413.386" style="fill:none;"/><clipPath id="clip_1_5TRB">
+<rect x="0" y="0" width="620.079" height="413.386"/></clipPath><g clip-path="url(#clip_1_5TRB)">
+<path d="M620.079,18.322l0,377.953c0,9.778 -7.939,17.717 -17.717,17.717l-584.646,0c-9.778,0 -17.717,-7.939 -17.717,-17.717l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l584.646,0c9.778,0 17.717,7.939 17.717,18.322Z" style="fill:#f2af0d;"/><path d="M620.079,18.322l0,377.953c0,9.778 -7.939,17.717 -17.717,17.717l-584.646,0c-9.778,0 -17.717,-7.939 -17.717,-17.717l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l584.646,0c9.778,0 17.717,7.939 17.717,17.717Zm-4.167,0c0,-7.478 -6.071,-13.55 -13.55,-13.55l-584.646,0c-7.478,0 -13.55,6.071 -13.55,13.55l0,377.953c0,7.478 6.071,13.55 13.55,13.55l584.646,0c7.483,0 13.55,-6.071 13.55,-13.55l0,-377.953Z"/><path d="M413.386,18.322l0,100.394l-413.386,0l0,-100.394c0,-9.778 7.939,-17.717 17.717,-17.717l377.953,-0c9.785,0 17.717,7.939 17.717,17.717Z" style="fill:#c0c0c0;"/><path d="M413.386,18.322l0,100.394l-413.386,0l0,-100.394c0,-9.778 7.939,-17.717 17.717,-17.717l377.953,-0c9.785,0 17.717,7.939 17.717,17.717Zm-4.167,0c0,-7.478 -6.071,-13.55 -13.55,-13.55l-377.953,0c-7.478,0 -13.55,6.071 -13.55,13.55l-0,96.227l405.052,-0l0,-96.227Z"/><rect x="-0" y="65.567" width="11.811" height="47.244"/><rect x="608.268" y="65.567" width="11.811" height="47.244"/><rect x="-0" y="301.787" width="11.811" height="47.244"/><rect x="608.268" y="301.787" width="11.811" height="47.244"/></g></svg>`,
+  "SP-17-1.5TLBS": `<svg width="100%" height="100%" viewBox="0 0 621 414" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板10" x="0" y="0" width="620.079" height="413.386" style="fill:none;"/><clipPath id="clip_1_5TLB">
+<rect x="0" y="0" width="620.079" height="413.386"/></clipPath><g clip-path="url(#clip_1_5TLB)">
+<path d="M620.079,17.717l0,377.953c0,9.778 -7.939,17.717 -17.717,17.717l-584.646,0c-9.778,0 -17.717,-7.939 -17.717,-17.717l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l584.646,0c9.778,0 17.717,7.939 17.717,17.717Z" style="fill:#f2af0d;"/><path d="M620.079,17.717l0,377.953c0,9.778 -7.939,17.717 -17.717,17.717l-584.646,0c-9.778,0 -17.717,-7.939 -17.717,-17.717l0,-377.953c0,-9.778 7.939,-17.717 17.717,-17.717l584.646,0c9.778,0 17.717,7.939 17.717,17.717Zm-4.167,0c0,-7.478 -6.071,-13.55 -13.55,-13.55l-584.646,0c-7.478,0 -13.55,6.071 -13.55,13.55l0,377.953c0,7.478 6.071,13.55 13.55,13.55l584.646,0c7.478,0 13.55,-6.071 13.55,-13.55l0,-377.953Z"/><path d="M620.079,17.717l0,100.394l-413.386,0l0,-100.394c0,-9.778 7.939,-17.717 17.717,-17.717l377.953,-0c9.785,0 17.717,7.939 17.717,17.717Z" style="fill:#c0c0c0;"/><path d="M620.079,17.717l0,100.394l-413.386,0l0,-100.394c0,-9.778 7.939,-17.717 17.717,-17.717l377.953,-0c9.785,0 17.717,7.939 17.717,17.717Zm-4.167,0c0,-7.478 -6.071,-13.55 -13.55,-13.55l-377.953,-0c-7.478,0 -13.55,6.071 -13.55,13.55l-0,96.227l405.052,-0l0,-96.227Z"/><rect x="-0" y="64.961" width="11.811" height="47.244"/><rect x="608.268" y="64.961" width="11.811" height="47.244"/><rect x="-0" y="301.181" width="11.811" height="47.244"/><rect x="608.268" y="301.181" width="11.811" height="47.244"/></g></svg>`,
+  "SP-17-60RSBS": `<svg width="115%" height="115%" viewBox="0 0 558 414" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板11" x="0" y="0" width="557.898" height="413.386" style="fill:none;"/><clipPath id="clip_60RSB">
+<rect x="0" y="0" width="557.898" height="413.386"/></clipPath><g clip-path="url(#clip_60RSB)">
+<path d="M355.952,413.386c-3.11,0 -6.165,-0.819 -8.858,-2.374c-34.372,-19.845 -274.249,-158.338 -338.235,-195.28c-4.17,-2.407 -7.18,-6.408 -8.339,-11.081c-1.158,-4.673 -0.365,-9.617 2.198,-13.693c68.184,-106.795 181.393,-176.107 306.608,-188.837c13.828,-1.406 27.802,-2.122 41.879,-2.122l188.976,0c9.785,0 17.717,7.932 17.717,17.717c0,67.773 0,310.18 0,377.953c-0,9.785 -7.932,17.717 -17.717,17.717c-44.553,-0 -159.467,-0 -184.229,-0Z" style="fill:#f2af0d;"/><path d="M355.952,413.386c-3.11,0 -6.165,-0.819 -8.858,-2.374l-338.235,-195.28c-4.17,-2.407 -7.18,-6.408 -8.339,-11.081c-1.158,-4.673 -0.365,-9.617 2.198,-13.693c68.184,-106.795 181.393,-176.107 306.608,-188.837c13.828,-1.406 27.802,-2.122 41.879,-2.122l188.976,0c9.785,0 17.717,7.932 17.717,17.717l0,377.953c-0,9.785 -7.932,17.717 -17.717,17.717l-184.229,-0Zm-0,-4.167l184.229,-0c7.483,-0 13.55,-6.066 13.55,-13.55l-0,-377.953c-0,-7.483 -6.066,-13.55 -13.55,-13.55l-188.976,-0c-13.935,0 -27.769,0.709 -41.457,2.1c-123.947,12.601 -236.01,81.208 -303.508,186.918c-1.956,3.116 -2.561,6.893 -1.676,10.463c0.886,3.574 3.188,6.634 6.378,8.475l338.235,195.28c2.06,1.189 4.396,1.815 6.775,1.815Z"/><path d="M95.489,265.748c0,0 -57.973,-33.471 -86.63,-50.016c-4.17,-2.407 -7.18,-6.408 -8.339,-11.081c-1.158,-4.673 -0.365,-9.617 2.198,-13.693c68.184,-106.795 181.393,-176.107 306.608,-188.837c13.828,-1.406 27.802,-2.122 41.879,-2.122l188.976,0c9.785,0 17.717,7.932 17.717,17.717l-0,100.394l-206.693,0c-105.492,0 -202.97,56.279 -255.716,147.638Z" style="fill:#c0c0c0;"/><path d="M95.489,265.748l-86.63,-50.016c-4.17,-2.407 -7.18,-6.408 -8.339,-11.081c-1.158,-4.673 -0.365,-9.617 2.198,-13.693c68.184,-106.795 181.393,-176.107 306.608,-188.837c13.828,-1.406 27.802,-2.122 41.879,-2.122l188.976,0c9.785,0 17.717,7.932 17.717,17.717l-0,100.394l-206.693,0c-105.492,0 -202.97,56.279 -255.716,147.638Zm-1.5,-5.677c53.953,-90.528 151.626,-146.127 257.216,-146.127l202.526,0l0,-96.227c0,-7.483 -6.066,-13.55 -13.55,-13.55l-188.976,-0c-13.935,0 -27.769,0.709 -41.457,2.1c-123.947,12.601 -236.01,81.208 -303.508,186.918c-1.956,3.116 -2.561,6.893 -1.676,10.463c0.886,3.574 3.188,6.634 6.378,8.475l83.047,47.947Z"/><path d="M55.678,229.125l40.915,23.622l-5.906,10.229l-40.915,-23.622l5.906,-10.229Z"/><path d="M260.251,347.235l40.915,23.622l-5.906,10.229l-40.915,-23.622l5.906,-10.229Z"/><rect x="546.087" y="64.961" width="11.811" height="47.244"/><rect x="546.087" y="301.181" width="11.811" height="47.244"/><g><path d="M360.705,228.832l-10.32,0.807c-0.922,-4.074 -2.229,-7.034 -3.92,-8.879c-2.806,-2.96 -6.265,-4.439 -10.377,-4.439c-3.305,0 -6.207,0.922 -8.706,2.767c-3.267,2.383 -5.842,5.861 -7.725,10.435c-1.883,4.574 -2.863,11.089 -2.94,19.544c2.498,-3.805 5.554,-6.63 9.167,-8.475c3.613,-1.845 7.399,-2.767 11.358,-2.767c6.918,0 12.809,2.546 17.671,7.639c4.862,5.093 7.293,11.675 7.293,19.746c0,5.304 -1.143,10.233 -3.43,14.788c-2.287,4.555 -5.429,8.043 -9.426,10.464c-3.997,2.421 -8.533,3.632 -13.606,3.632c-8.648,0 -15.701,-3.181 -21.159,-9.542c-5.458,-6.361 -8.187,-16.844 -8.187,-31.45c0,-16.335 3.017,-28.211 9.051,-35.629c5.266,-6.457 12.357,-9.686 21.274,-9.686c6.649,0 12.097,1.864 16.345,5.592c4.247,3.728 6.793,8.879 7.639,15.451Zm-42.375,36.436c0,3.574 0.759,6.995 2.277,10.262c1.518,3.267 3.642,5.756 6.371,7.466c2.729,1.71 5.592,2.566 8.59,2.566c4.382,0 8.148,-1.768 11.3,-5.304c3.152,-3.536 4.728,-8.34 4.728,-14.413c0,-5.842 -1.557,-10.445 -4.67,-13.808c-3.113,-3.363 -7.034,-5.045 -11.761,-5.045c-4.689,0 -8.667,1.682 -11.934,5.045c-3.267,3.363 -4.9,7.774 -4.9,13.231Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M372.523,250.97c0,-9.993 1.028,-18.036 3.084,-24.128c2.056,-6.092 5.112,-10.791 9.167,-14.096c4.055,-3.305 9.157,-4.958 15.307,-4.958c4.535,0 8.513,0.913 11.934,2.739c3.421,1.826 6.246,4.458 8.475,7.898c2.229,3.44 3.978,7.629 5.246,12.568c1.268,4.939 1.903,11.598 1.903,19.977c0,9.916 -1.019,17.92 -3.056,24.012c-2.037,6.092 -5.083,10.8 -9.138,14.125c-4.055,3.325 -9.176,4.987 -15.364,4.987c-8.148,0 -14.548,-2.921 -19.198,-8.763c-5.573,-7.034 -8.36,-18.487 -8.36,-34.361Zm10.666,0c0,13.875 1.624,23.109 4.872,27.702c3.248,4.593 7.255,6.889 12.021,6.889c4.766,0 8.773,-2.306 12.021,-6.918c3.248,-4.612 4.872,-13.837 4.872,-27.673c0,-13.914 -1.624,-23.157 -4.872,-27.731c-3.248,-4.574 -7.293,-6.861 -12.136,-6.861c-4.766,0 -8.571,2.018 -11.415,6.054c-3.574,5.15 -5.362,14.663 -5.362,28.538Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M440.669,222.663c0,-4.42 1.566,-8.187 4.699,-11.3c3.132,-3.113 6.889,-4.67 11.271,-4.67c4.458,0 8.244,1.557 11.358,4.67c3.113,3.113 4.67,6.88 4.67,11.3c0,4.42 -1.566,8.196 -4.699,11.329c-3.132,3.132 -6.909,4.699 -11.329,4.699c-4.382,0 -8.139,-1.557 -11.271,-4.67c-3.132,-3.113 -4.699,-6.899 -4.699,-11.358Zm6.284,0c0,2.69 0.951,4.987 2.854,6.889c1.903,1.903 4.199,2.854 6.889,2.854c2.652,0 4.929,-0.951 6.832,-2.854c1.903,-1.903 2.854,-4.199 2.854,-6.889c0,-2.69 -0.951,-4.987 -2.854,-6.889c-1.903,-1.903 -4.18,-2.854 -6.832,-2.854c-2.69,0 -4.987,0.951 -6.889,2.854c-1.903,1.903 -2.854,4.199 -2.854,6.889Z" style="fill:#ffffff;fill-rule:nonzero;"/></g></g></svg>`,
+  "SP-17-60LSBS": `<svg width="115%" height="115%" viewBox="0 0 558 414" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板12" x="0" y="0" width="557.898" height="413.386" style="fill:none;"/><clipPath id="clip_60LSB">
+<rect x="0" y="0" width="557.898" height="413.386"/></clipPath><g clip-path="url(#clip_60LSB)">
+<path d="M201.946,413.386c3.11,0 6.165,-0.819 8.858,-2.374c34.372,-19.845 274.249,-158.338 338.235,-195.28c4.17,-2.407 7.18,-6.408 8.339,-11.081c1.158,-4.673 0.365,-9.617 -2.198,-13.693c-68.184,-106.795 -181.393,-176.107 -306.608,-188.837c-13.828,-1.406 -27.802,-2.122 -41.879,-2.122l-188.976,0c-9.785,0 -17.717,7.932 -17.717,17.717c-0,67.773 -0,310.18 -0,377.953c0,9.785 7.932,17.717 17.717,17.717c44.553,-0 159.467,-0 184.229,-0Z" style="fill:#f2af0d;"/><path d="M201.946,413.386l-184.229,0c-9.785,-0 -17.717,-7.932 -17.717,-17.717l0,-377.953c0,-9.785 7.932,-17.717 17.717,-17.717l188.976,-0c14.076,0 28.051,0.716 41.879,2.122c125.215,12.73 238.424,82.041 306.608,188.837c2.563,4.076 3.357,9.019 2.198,13.693c-1.158,4.673 -4.169,8.674 -8.339,11.081l-338.235,195.28c-2.693,1.555 -5.748,2.374 -8.858,2.374Zm0,-4.167c2.378,0 4.715,-0.626 6.775,-1.815l338.235,-195.28c3.189,-1.841 5.492,-4.901 6.377,-8.475c0.885,-3.571 0.28,-7.348 -1.676,-10.463c-67.498,-105.71 -179.561,-174.317 -303.508,-186.918c-13.689,-1.392 -27.523,-2.1 -41.457,-2.1l-188.976,0c-7.483,0 -13.55,6.066 -13.55,13.55l0,377.953c0,7.483 6.066,13.55 13.55,13.55l184.229,-0Z"/><path d="M462.409,265.748c0,-0 57.973,-33.471 86.63,-50.016c4.17,-2.407 7.18,-6.408 8.339,-11.081c1.158,-4.673 0.365,-9.617 -2.198,-13.693c-68.184,-106.795 -181.393,-176.107 -306.608,-188.837c-13.828,-1.406 -27.802,-2.122 -41.879,-2.122l-188.976,0c-9.785,0 -17.717,7.932 -17.717,17.717l0,100.394l206.693,0c105.492,0 202.97,56.279 255.716,147.638Z" style="fill:#c0c0c0;"/><path d="M462.409,265.748c-52.746,-91.359 -150.224,-147.638 -255.716,-147.638l-206.693,-0l-0,-100.394c-0,-9.785 7.932,-17.717 17.717,-17.717l188.976,0c14.076,0 28.051,0.716 41.879,2.122c125.215,12.73 238.424,82.041 306.608,188.837c2.563,4.076 3.357,9.019 2.198,13.693c-1.158,4.673 -4.169,8.674 -8.339,11.081l-86.63,50.016Zm1.5,-5.677l83.047,-47.947c3.189,-1.841 5.492,-4.901 6.378,-8.475c0.885,-3.571 0.28,-7.348 -1.676,-10.463c-67.498,-105.71 -179.561,-174.317 -303.508,-186.918c-13.689,-1.392 -27.523,-2.1 -41.457,-2.1l-188.976,0c-7.483,0 -13.55,6.066 -13.55,13.55l-0,96.227l202.526,0c105.59,0 203.264,55.6 257.216,146.127Z"/><path d="M502.22,229.125l-40.915,23.622l5.906,10.229l40.915,-23.622l-5.906,-10.229Z"/><path d="M297.647,347.235l-40.915,23.622l5.906,10.229l40.915,-23.622l-5.906,-10.229Z"/><rect x="0" y="64.961" width="11.811" height="47.244"/><rect x="0" y="301.181" width="11.811" height="47.244"/><g><path d="M148.017,228.832l-10.32,0.807c-0.922,-4.074 -2.229,-7.034 -3.92,-8.879c-2.806,-2.96 -6.265,-4.439 -10.377,-4.439c-3.305,0 -6.207,0.922 -8.706,2.767c-3.267,2.383 -5.842,5.861 -7.725,10.435c-1.883,4.574 -2.863,11.089 -2.94,19.544c2.498,-3.805 5.554,-6.63 9.167,-8.475c3.613,-1.845 7.399,-2.767 11.358,-2.767c6.918,0 12.809,2.546 17.671,7.639c4.862,5.093 7.293,11.675 7.293,19.746c0,5.304 -1.143,10.233 -3.43,14.788c-2.287,4.555 -5.429,8.043 -9.426,10.464c-3.997,2.421 -8.533,3.632 -13.606,3.632c-8.648,0 -15.701,-3.181 -21.159,-9.542c-5.458,-6.361 -8.187,-16.844 -8.187,-31.45c0,-16.335 3.017,-28.211 9.051,-35.629c5.266,-6.457 12.357,-9.686 21.274,-9.686c6.649,0 12.097,1.864 16.345,5.592c4.247,3.728 6.793,8.879 7.639,15.451Zm-42.375,36.436c0,3.574 0.759,6.995 2.277,10.262c1.518,3.267 3.642,5.756 6.371,7.466c2.729,1.71 5.592,2.566 8.59,2.566c4.382,0 8.148,-1.768 11.3,-5.304c3.152,-3.536 4.728,-8.34 4.728,-14.413c0,-5.842 -1.557,-10.445 -4.67,-13.808c-3.113,-3.363 -7.034,-5.045 -11.761,-5.045c-4.689,0 -8.667,1.682 -11.934,5.045c-3.267,3.363 -4.9,7.774 -4.9,13.231Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M159.836,250.97c0,-9.993 1.028,-18.036 3.084,-24.128c2.056,-6.092 5.112,-10.791 9.167,-14.096c4.055,-3.305 9.157,-4.958 15.307,-4.958c4.535,0 8.513,0.913 11.934,2.739c3.421,1.826 6.246,4.458 8.475,7.898c2.229,3.44 3.978,7.629 5.246,12.568c1.268,4.939 1.903,11.598 1.903,19.977c0,9.916 -1.019,17.92 -3.056,24.012c-2.037,6.092 -5.083,10.8 -9.138,14.125c-4.055,3.325 -9.176,4.987 -15.364,4.987c-8.148,0 -14.548,-2.921 -19.198,-8.763c-5.573,-7.034 -8.36,-18.487 -8.36,-34.361Zm10.666,0c0,13.875 1.624,23.109 4.872,27.702c3.248,4.593 7.255,6.889 12.021,6.889c4.766,0 8.773,-2.306 12.021,-6.918c3.248,-4.612 4.872,-13.837 4.872,-27.673c0,-13.914 -1.624,-23.157 -4.872,-27.731c-3.248,-4.574 -7.293,-6.861 -12.136,-6.861c-4.766,0 -8.571,2.018 -11.415,6.054c-3.574,5.15 -5.362,14.663 -5.362,28.538Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M227.981,222.663c0,-4.42 1.566,-8.187 4.699,-11.3c3.132,-3.113 6.889,-4.67 11.271,-4.67c4.458,0 8.244,1.557 11.358,4.67c3.113,3.113 4.67,6.88 4.67,11.3c0,4.42 -1.566,8.196 -4.699,11.329c-3.132,3.132 -6.909,4.699 -11.329,4.699c-4.382,0 -8.139,-1.557 -11.271,-4.67c-3.132,-3.113 -4.699,-6.899 -4.699,-11.358Zm6.284,0c0,2.69 0.951,4.987 2.854,6.889c1.903,1.903 4.199,2.854 6.889,2.854c2.652,0 4.929,-0.951 6.832,-2.854c1.903,-1.903 2.854,-4.199 2.854,-6.889c0,-2.69 -0.951,-4.987 -2.854,-6.889c-1.903,-1.903 -4.18,-2.854 -6.832,-2.854c-2.69,0 -4.987,0.951 -6.889,2.854c-1.903,1.903 -2.854,4.199 -2.854,6.889Z" style="fill:#ffffff;fill-rule:nonzero;"/></g></g></svg>`,
+  "SP-17-60RNBS": `<svg width="115%" height="115%" viewBox="0 0 558 414" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板13" x="0" y="0" width="557.898" height="413.386" style="fill:none;"/><clipPath id="clip_60RNB">
+<rect x="0" y="0" width="557.898" height="413.386"/></clipPath><g clip-path="url(#clip_60RNB)">
+<path d="M355.952,413.386c-3.11,0 -6.165,-0.819 -8.858,-2.374c-34.372,-19.845 -274.249,-158.338 -338.235,-195.28c-4.17,-2.407 -7.18,-6.408 -8.339,-11.081c-1.158,-4.673 -0.365,-9.617 2.198,-13.693c68.184,-106.795 181.393,-176.107 306.608,-188.837c13.828,-1.406 27.802,-2.122 41.879,-2.122l188.976,0c9.785,0 17.717,7.932 17.717,17.717c0,67.773 0,310.18 0,377.953c-0,9.785 -7.932,17.717 -17.717,17.717c-44.553,-0 -159.467,-0 -184.229,-0Z" style="fill:#f2af0d;"/><path d="M355.952,413.386c-3.11,0 -6.165,-0.819 -8.858,-2.374l-338.235,-195.28c-4.17,-2.407 -7.18,-6.408 -8.339,-11.081c-1.158,-4.673 -0.365,-9.617 2.198,-13.693c68.184,-106.795 181.393,-176.107 306.608,-188.837c13.828,-1.406 27.802,-2.122 41.879,-2.122l188.976,0c9.785,0 17.717,7.932 17.717,17.717l0,377.953c-0,9.785 -7.932,17.717 -17.717,17.717l-184.229,-0Zm-0,-4.167l184.229,-0c7.483,-0 13.55,-6.066 13.55,-13.55l-0,-377.953c-0,-7.483 -6.066,-13.55 -13.55,-13.55l-188.976,-0c-13.935,0 -27.769,0.709 -41.457,2.1c-123.947,12.601 -236.01,81.208 -303.508,186.918c-1.956,3.116 -2.561,6.893 -1.676,10.463c0.886,3.574 3.188,6.634 6.378,8.475l338.235,195.28c2.06,1.189 4.396,1.815 6.775,1.815Z"/><g><path d="M333.258,185.131l-10.32,0.807c-0.922,-4.074 -2.229,-7.034 -3.92,-8.879c-2.806,-2.96 -6.265,-4.439 -10.377,-4.439c-3.305,0 -6.207,0.922 -8.706,2.767c-3.267,2.383 -5.842,5.861 -7.725,10.435c-1.883,4.574 -2.863,11.089 -2.94,19.544c2.498,-3.805 5.554,-6.63 9.167,-8.475c3.613,-1.845 7.399,-2.767 11.358,-2.767c6.918,0 12.809,2.546 17.671,7.639c4.862,5.093 7.293,11.675 7.293,19.746c0,5.304 -1.143,10.233 -3.43,14.788c-2.287,4.555 -5.429,8.043 -9.426,10.464c-3.997,2.421 -8.533,3.632 -13.606,3.632c-8.648,0 -15.701,-3.181 -21.159,-9.542c-5.458,-6.361 -8.187,-16.844 -8.187,-31.45c0,-16.335 3.017,-28.211 9.051,-35.629c5.266,-6.457 12.357,-9.686 21.274,-9.686c6.649,0 12.097,1.864 16.345,5.592c4.247,3.728 6.793,8.879 7.639,15.451Zm-42.375,36.436c0,3.574 0.759,6.995 2.277,10.262c1.518,3.267 3.642,5.756 6.371,7.466c2.729,1.71 5.592,2.566 8.59,2.566c4.382,0 8.148,-1.768 11.3,-5.304c3.152,-3.536 4.728,-8.34 4.728,-14.413c0,-5.842 -1.557,-10.445 -4.67,-13.808c-3.113,-3.363 -7.034,-5.045 -11.761,-5.045c-4.689,0 -8.667,1.682 -11.934,5.045c-3.267,3.363 -4.9,7.774 -4.9,13.231Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M345.077,207.269c0,-9.993 1.028,-18.036 3.084,-24.128c2.056,-6.092 5.112,-10.791 9.167,-14.096c4.055,-3.305 9.157,-4.958 15.307,-4.958c4.535,0 8.513,0.913 11.934,2.739c3.421,1.826 6.246,4.458 8.475,7.898c2.229,3.44 3.978,7.629 5.246,12.568c1.268,4.939 1.903,11.598 1.903,19.977c0,9.916 -1.019,17.92 -3.056,24.012c-2.037,6.092 -5.083,10.8 -9.138,14.125c-4.055,3.325 -9.176,4.987 -15.364,4.987c-8.148,0 -14.548,-2.921 -19.198,-8.763c-5.573,-7.034 -8.36,-18.487 -8.36,-34.361Zm10.666,0c0,13.875 1.624,23.109 4.872,27.702c3.248,4.593 7.255,6.889 12.021,6.889c4.766,0 8.773,-2.306 12.021,-6.918c3.248,-4.612 4.872,-13.837 4.872,-27.673c0,-13.914 -1.624,-23.157 -4.872,-27.731c-3.248,-4.574 -7.293,-6.861 -12.136,-6.861c-4.766,0 -8.571,2.018 -11.415,6.054c-3.574,5.15 -5.362,14.663 -5.362,28.538Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M413.222,178.962c0,-4.42 1.566,-8.187 4.699,-11.3c3.132,-3.113 6.889,-4.67 11.271,-4.67c4.458,0 8.244,1.557 11.358,4.67c3.113,3.113 4.67,6.88 4.67,11.3c0,4.42 -1.566,8.196 -4.699,11.329c-3.132,3.132 -6.909,4.699 -11.329,4.699c-4.382,0 -8.139,-1.557 -11.271,-4.67c-3.132,-3.113 -4.699,-6.899 -4.699,-11.358Zm6.284,0c0,2.69 0.951,4.987 2.854,6.889c1.903,1.903 4.199,2.854 6.889,2.854c2.652,0 4.929,-0.951 6.832,-2.854c1.903,-1.903 2.854,-4.199 2.854,-6.889c0,-2.69 -0.951,-4.987 -2.854,-6.889c-1.903,-1.903 -4.18,-2.854 -6.832,-2.854c-2.69,0 -4.987,0.951 -6.889,2.854c-1.903,1.903 -2.854,4.199 -2.854,6.889Z" style="fill:#ffffff;fill-rule:nonzero;"/></g><path d="M55.678,229.125l40.915,23.622l-5.906,10.229l-40.915,-23.622l5.906,-10.229Z"/><path d="M260.251,347.235l40.915,23.622l-5.906,10.229l-40.915,-23.622l5.906,-10.229Z"/><rect x="546.087" y="64.961" width="11.811" height="47.244"/><rect x="546.087" y="301.181" width="11.811" height="47.244"/></g></svg>`,
+  "SP-17-60LNBS": `<svg width="115%" height="115%" viewBox="0 0 558 414" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板14" x="0" y="0" width="557.898" height="413.386" style="fill:none;"/><clipPath id="clip_60LNB_user">
+<rect x="0" y="0" width="557.898" height="413.386"/></clipPath><g clip-path="url(#clip_60LNB_user)">
+<path d="M201.946,413.386c3.11,0 6.165,-0.819 8.858,-2.374c34.372,-19.845 274.249,-158.338 338.235,-195.28c4.17,-2.407 7.18,-6.408 8.339,-11.081c1.158,-4.673 0.365,-9.617 -2.198,-13.693c-68.184,-106.795 -181.393,-176.107 -306.608,-188.837c-13.828,-1.406 -27.802,-2.122 -41.879,-2.122l-188.976,0c-9.785,0 -17.717,7.932 -17.717,17.717c-0,67.773 -0,310.18 -0,377.953c0,9.785 7.932,17.717 17.717,17.717c44.553,-0 159.467,-0 184.229,-0Z" style="fill:#f2af0d;"/><path d="M201.946,413.386l-184.229,0c-9.785,-0 -17.717,-7.932 -17.717,-17.717l0,-377.953c0,-9.785 7.932,-17.717 17.717,-17.717l188.976,-0c14.076,0 28.051,0.716 41.879,2.122c125.215,12.73 238.424,82.041 306.608,188.837c2.563,4.076 3.357,9.019 2.198,13.693c-1.158,4.673 -4.169,8.674 -8.339,11.081l-338.235,195.28c-2.693,1.555 -5.748,2.374 -8.858,2.374Zm0,-4.167c2.378,0 4.715,-0.626 6.775,-1.815l338.235,-195.28c3.189,-1.841 5.492,-4.901 6.377,-8.475c0.885,-3.571 0.28,-7.348 -1.676,-10.463c-67.498,-105.71 -179.561,-174.317 -303.508,-186.918c-13.689,-1.392 -27.523,-2.1 -41.457,-2.1l-188.976,0c-7.483,0 -13.55,6.066 -13.55,13.55l0,377.953c0,7.483 6.066,13.55 13.55,13.55l184.229,-0Z"/><g><path d="M166.988,185.131l-10.32,0.807c-0.922,-4.074 -2.229,-7.034 -3.92,-8.879c-2.806,-2.96 -6.265,-4.439 -10.377,-4.439c-3.305,0 -6.207,0.922 -8.706,2.767c-3.267,2.383 -5.842,5.861 -7.725,10.435c-1.883,4.574 -2.863,11.089 -2.94,19.544c2.498,-3.805 5.554,-6.63 9.167,-8.475c3.613,-1.845 7.399,-2.767 11.358,-2.767c6.918,0 12.809,2.546 17.671,7.639c4.862,5.093 7.293,11.675 7.293,19.746c0,5.304 -1.143,10.233 -3.43,14.788c-2.287,4.555 -5.429,8.043 -9.426,10.464c-3.997,2.421 -8.533,3.632 -13.606,3.632c-8.648,0 -15.701,-3.181 -21.159,-9.542c-5.458,-6.361 -8.187,-16.844 -8.187,-31.45c0,-16.335 3.017,-28.211 9.051,-35.629c5.266,-6.457 12.357,-9.686 21.274,-9.686c6.649,0 12.097,1.864 16.345,5.592c4.247,3.728 6.793,8.879 7.639,15.451Zm-42.375,36.436c0,3.574 0.759,6.995 2.277,10.262c1.518,3.267 3.642,5.756 6.371,7.466c2.729,1.71 5.592,2.566 8.59,2.566c4.382,0 8.148,-1.768 11.3,-5.304c3.152,-3.536 4.728,-8.34 4.728,-14.413c0,-5.842 -1.557,-10.445 -4.67,-13.808c-3.113,-3.363 -7.034,-5.045 -11.761,-5.045c-4.689,0 -8.667,1.682 -11.934,5.045c-3.267,3.363 -4.9,7.774 -4.9,13.231Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M178.806,207.269c0,-9.993 1.028,-18.036 3.084,-24.128c2.056,-6.092 5.112,-10.791 9.167,-14.096c4.055,-3.305 9.157,-4.958 15.307,-4.958c4.535,0 8.513,0.913 11.934,2.739c3.421,1.826 6.246,4.458 8.475,7.898c2.229,3.44 3.978,7.629 5.246,12.568c1.268,4.939 1.903,11.598 1.903,19.977c0,9.916 -1.019,17.92 -3.056,24.012c-2.037,6.092 -5.083,10.8 -9.138,14.125c-4.055,3.325 -9.176,4.987 -15.364,4.987c-8.148,0 -14.548,-2.921 -19.198,-8.763c-5.573,-7.034 -8.36,-18.487 -8.36,-34.361Zm10.666,0c0,13.875 1.624,23.109 4.872,27.702c3.248,4.593 7.255,6.889 12.021,6.889c4.766,0 8.773,-2.306 12.021,-6.918c3.248,-4.612 4.872,-13.837 4.872,-27.673c0,-13.914 -1.624,-23.157 -4.872,-27.731c-3.248,-4.574 -7.293,-6.861 -12.136,-6.861c-4.766,0 -8.571,2.018 -11.415,6.054c-3.574,5.15 -5.362,14.663 -5.362,28.538Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M246.952,178.962c0,-4.42 1.566,-8.187 4.699,-11.3c3.132,-3.113 6.889,-4.67 11.271,-4.67c4.458,0 8.244,1.557 11.358,4.67c3.113,3.113 4.67,6.88 4.67,11.3c0,4.42 -1.566,8.196 -4.699,11.329c-3.132,3.132 -6.909,4.699 -11.329,4.699c-4.382,0 -8.139,-1.557 -11.271,-4.67c-3.132,-3.113 -4.699,-6.899 -4.699,-11.358Zm6.284,0c0,2.69 0.951,4.987 2.854,6.889c1.903,1.903 4.199,2.854 6.889,2.854c2.652,0 4.929,-0.951 6.832,-2.854c1.903,-1.903 2.854,-4.199 2.854,-6.889c0,-2.69 -0.951,-4.987 -2.854,-6.889c-1.903,-1.903 -4.18,-2.854 -6.832,-2.854c-2.69,0 -4.987,0.951 -6.889,2.854c-1.903,1.903 -2.854,4.199 -2.854,6.889Z" style="fill:#ffffff;fill-rule:nonzero;"/></g><path d="M502.22,229.125l-40.915,23.622l5.906,10.229l40.915,-23.622l-5.906,-10.229Z"/><path d="M297.647,347.235l-40.915,23.622l5.906,10.229l40.915,-23.622l-5.906,-10.229Z"/><rect x="0" y="64.961" width="11.811" height="47.244"/><rect x="0" y="301.181" width="11.811" height="47.244"/></g></svg>`,
+  "SP-17-45RSBS": `<svg width="100%" height="100%" viewBox="0 0 492 414" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板15" x="0" y="0" width="491.402" height="413.386" style="fill:none;"/><clipPath id="clip_45RSB">
+<rect x="0" y="0" width="491.402" height="413.386"/></clipPath><g clip-path="url(#clip_45RSB)">
+<path d="M292.985,413.386c-4.699,0 -9.205,-1.867 -12.527,-5.189c-33.82,-33.82 -223.1,-223.1 -274.331,-274.331c-3.406,-3.406 -5.279,-8.052 -5.186,-12.868c0.093,-4.816 2.142,-9.387 5.677,-12.66c76.052,-69.532 175.54,-108.338 279.029,-108.338l188.976,0c9.785,0 17.717,7.932 17.717,17.717c0,67.773 0,310.18 0,377.953c-0,9.785 -7.932,17.717 -17.717,17.717c-43.155,-0 -152.327,-0 -181.638,-0Z" style="fill:#f2af0d;"/><path d="M292.985,413.386c-4.699,0 -9.205,-1.867 -12.527,-5.189l-274.331,-274.331c-3.406,-3.406 -5.279,-8.052 -5.186,-12.868c0.093,-4.816 2.142,-9.387 5.677,-12.66c76.052,-69.532 175.54,-108.338 279.029,-108.338l188.976,0c9.785,0 17.717,7.932 17.717,17.717l0,377.953c-0,9.785 -7.932,17.717 -17.717,17.717l-181.638,-0Zm-0,-4.167l181.638,-0c7.483,-0 13.55,-6.066 13.55,-13.55l-0,-377.953c-0,-7.483 -6.066,-13.55 -13.55,-13.55l-188.976,0c-102.441,0 -200.921,38.41 -276.205,107.235c-2.699,2.502 -4.264,5.996 -4.335,9.676c-0.071,3.683 1.361,7.237 3.966,9.842l274.331,274.331c2.541,2.541 5.988,3.969 9.581,3.969Z"/><path d="M76.855,204.594l-70.729,-70.729c-3.406,-3.406 -5.279,-8.052 -5.186,-12.868c0.093,-4.816 2.142,-9.387 5.677,-12.66c76.052,-69.532 175.54,-108.338 279.029,-108.338l188.976,0c9.785,0 17.717,7.932 17.717,17.717l0,100.394l-206.693,0c-78.312,0 -153.416,31.109 -208.791,86.484Z" style="fill:#c0c0c0;"/><path d="M76.855,204.594l-70.729,-70.729c-3.406,-3.406 -5.279,-8.052 -5.186,-12.868c0.093,-4.816 2.142,-9.387 5.677,-12.66c76.052,-69.532 175.54,-108.338 279.029,-108.338l188.976,0c9.785,0 17.717,7.932 17.717,17.717l0,100.394l-206.693,0c-78.312,0 -153.416,31.109 -208.791,86.484Zm0.02,-5.872c55.857,-54.325 130.744,-84.779 208.771,-84.779l202.526,-0l-0,-96.227c-0,-7.483 -6.066,-13.55 -13.55,-13.55l-188.976,0c-102.441,0 -200.921,38.41 -276.205,107.235c-2.699,2.502 -4.264,5.996 -4.335,9.676c-0.071,3.683 1.361,7.237 3.966,9.842l67.803,67.803Z"/><rect x="479.591" y="64.961" width="11.811" height="47.244"/><rect x="479.591" y="301.181" width="11.811" height="47.244"/><path d="M47.884,158.92l33.407,33.407l-8.352,8.352l-33.407,-33.407l8.352,-8.352Z"/><path d="M214.917,325.953l33.407,33.407l-8.352,8.352l-33.407,-33.407l8.352,-8.352Z"/><g><path d="M282.785,292.653l0,-20.236l-36.667,0l0,-9.513l38.57,-54.77l8.475,0l0,54.77l11.415,0l0,9.513l-11.415,0l0,20.236l-10.377,0Zm0,-29.749l0,-38.108l-26.463,38.108l26.463,0Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M315.186,270.514l10.896,-0.922c0.807,5.304 2.681,9.292 5.621,11.963c2.94,2.671 6.486,4.007 10.637,4.007c4.997,0 9.224,-1.883 12.684,-5.65c3.459,-3.767 5.189,-8.763 5.189,-14.99c0,-5.919 -1.662,-10.589 -4.987,-14.01c-3.325,-3.421 -7.677,-5.131 -13.058,-5.131c-3.344,0 -6.361,0.759 -9.051,2.277c-2.69,1.518 -4.804,3.488 -6.342,5.909l-9.743,-1.268l8.187,-43.412l42.029,0l0,9.916l-33.727,0l-4.555,22.715c5.073,-3.536 10.397,-5.304 15.97,-5.304c7.38,0 13.606,2.556 18.679,7.668c5.073,5.112 7.61,11.684 7.61,19.717c0,7.649 -2.229,14.259 -6.688,19.833c-5.419,6.841 -12.818,10.262 -22.196,10.262c-7.687,0 -13.962,-2.152 -18.824,-6.457c-4.862,-4.305 -7.639,-10.012 -8.331,-17.123Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M383.331,222.663c0,-4.42 1.566,-8.187 4.699,-11.3c3.132,-3.113 6.889,-4.67 11.271,-4.67c4.458,0 8.244,1.557 11.358,4.67c3.113,3.113 4.67,6.88 4.67,11.3c0,4.42 -1.566,8.196 -4.699,11.329c-3.132,3.132 -6.909,4.699 -11.329,4.699c-4.382,0 -8.139,-1.557 -11.271,-4.67c-3.132,-3.113 -4.699,-6.899 -4.699,-11.358Zm6.284,0c0,2.69 0.951,4.987 2.854,6.889c1.903,1.903 4.199,2.854 6.889,2.854c2.652,0 4.929,-0.951 6.832,-2.854c1.903,-1.903 2.854,-4.199 2.854,-6.889c0,-2.69 -0.951,-4.987 -2.854,-6.889c-1.903,-1.903 -4.18,-2.854 -6.832,-2.854c-2.69,0 -4.987,0.951 -6.889,2.854c-1.903,1.903 -2.854,4.199 -2.854,6.889Z" style="fill:#ffffff;fill-rule:nonzero;"/></g></g></svg>`,
+  "SP-17-45LSBS": `<svg width="100%" height="100%" viewBox="0 0 492 414" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板16" x="0" y="0" width="491.402" height="413.386" style="fill:none;"/><clipPath id="clip_45LSB">
+<rect x="0" y="0" width="491.402" height="413.386"/></clipPath><g clip-path="url(#clip_45LSB)">
+<path d="M199.354,413.386c4.699,0 9.205,-1.867 12.527,-5.189c33.82,-33.82 223.1,-223.1 274.331,-274.331c3.406,-3.406 5.279,-8.052 5.186,-12.868c-0.093,-4.816 -2.142,-9.387 -5.677,-12.66c-76.052,-69.532 -175.54,-108.338 -279.029,-108.338l-188.976,0c-9.785,0 -17.717,7.932 -17.717,17.717c-0,67.773 -0,310.18 -0,377.953c0,9.785 7.932,17.717 17.717,17.717c43.155,-0 152.327,-0 181.638,-0Z" style="fill:#f2af0d;"/><path d="M199.354,413.386l-181.638,0c-9.785,-0 -17.717,-7.932 -17.717,-17.717l0,-377.953c0,-9.785 7.932,-17.717 17.717,-17.717l188.976,0c103.489,0 202.977,38.806 279.029,108.338c3.535,3.273 5.584,7.843 5.677,12.66c0.093,4.816 -1.78,9.462 -5.186,12.868l-274.331,274.331c-3.322,3.322 -7.829,5.189 -12.527,5.189Zm0,-4.167c3.594,0 7.04,-1.428 9.581,-3.969l274.331,-274.331c2.605,-2.605 4.037,-6.158 3.966,-9.842c-0.071,-3.68 -1.636,-7.173 -4.335,-9.676c-75.285,-68.824 -173.765,-107.235 -276.205,-107.235l-188.976,0c-7.483,0 -13.55,6.066 -13.55,13.55l0,377.953c0,7.483 6.066,13.55 13.55,13.55l181.638,-0Z"/><g><path d="M113.158,292.653l0,-20.236l-36.667,0l0,-9.513l38.57,-54.77l8.475,0l0,54.77l11.415,0l0,9.513l-11.415,0l0,20.236l-10.377,0Zm0,-29.749l0,-38.108l-26.463,38.108l26.463,0Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M145.559,270.514l10.896,-0.922c0.807,5.304 2.681,9.292 5.621,11.963c2.94,2.671 6.486,4.007 10.637,4.007c4.997,0 9.224,-1.883 12.684,-5.65c3.459,-3.767 5.189,-8.763 5.189,-14.99c0,-5.919 -1.662,-10.589 -4.987,-14.01c-3.325,-3.421 -7.677,-5.131 -13.058,-5.131c-3.344,0 -6.361,0.759 -9.051,2.277c-2.69,1.518 -4.804,3.488 -6.342,5.909l-9.743,-1.268l8.187,-43.412l42.029,0l0,9.916l-33.727,0l-4.555,22.715c5.073,-3.536 10.397,-5.304 15.97,-5.304c7.38,0 13.606,2.556 18.679,7.668c5.073,5.112 7.61,11.684 7.61,19.717c0,7.649 -2.229,14.259 -6.688,19.833c-5.419,6.841 -12.818,10.262 -22.196,10.262c-7.687,0 -13.962,-2.152 -18.824,-6.457c-4.862,-4.305 -7.639,-10.012 -8.331,-17.123Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M213.704,222.663c0,-4.42 1.566,-8.187 4.699,-11.3c3.132,-3.113 6.889,-4.67 11.271,-4.67c4.458,0 8.244,1.557 11.358,4.67c3.113,3.113 4.67,6.88 4.67,11.3c0,4.42 -1.566,8.196 -4.699,11.329c-3.132,3.132 -6.909,4.699 -11.329,4.699c-4.382,0 -8.139,-1.557 -11.271,-4.67c-3.132,-3.113 -4.699,-6.899 -4.699,-11.358Zm6.284,0c0,2.69 0.951,4.987 2.854,6.889c1.903,1.903 4.199,2.854 6.889,2.854c2.652,0 4.929,-0.951 6.832,-2.854c1.903,-1.903 2.854,-4.199 2.854,-6.889c0,-2.69 -0.951,-4.987 -2.854,-6.889c-1.903,-1.903 -4.18,-2.854 -6.832,-2.854c-2.69,0 -4.987,0.951 -6.889,2.854c-1.903,1.903 -2.854,4.199 -2.854,6.889Z" style="fill:#ffffff;fill-rule:nonzero;"/></g><path d="M415.484,206.693l70.729,-71.454c3.406,-3.441 5.279,-8.135 5.186,-13c-0.093,-4.866 -2.142,-9.483 -5.677,-12.789c-76.052,-70.245 -175.54,-109.449 -279.029,-109.449l-188.976,0c-9.785,0 -17.717,8.013 -17.717,17.898l-0,101.423l206.693,0c78.312,0 153.416,31.428 208.791,87.371Z" style="fill:#c0c0c0;"/><path d="M415.484,206.693c-55.375,-55.943 -130.479,-87.371 -208.791,-87.371l-206.693,0l0,-101.423c0,-9.885 7.932,-17.898 17.717,-17.898l188.976,0c103.489,0 202.977,39.204 279.029,109.449c3.535,3.306 5.584,7.924 5.677,12.789c0.093,4.866 -1.78,9.559 -5.186,13l-70.729,71.454Zm-0.021,-5.902l67.788,-68.484c2.617,-2.644 4.053,-6.252 3.981,-9.99c-0.071,-3.734 -1.64,-7.28 -4.351,-9.819c-75.281,-69.527 -173.755,-108.332 -276.19,-108.332l-188.976,0c-7.495,0 -13.55,6.159 -13.55,13.732l-0,97.257l202.526,0c78.025,0 152.912,30.759 208.771,85.636Z"/><rect x="0.937" y="64.961" width="11.811" height="47.244"/><rect x="0.937" y="301.181" width="11.811" height="47.244"/><path d="M444.455,158.92l-33.407,33.407l8.352,8.352l33.407,-33.407l-8.352,-8.352Z"/><path d="M277.422,325.953l-33.407,33.407l8.352,8.352l33.407,-33.407l-8.352,-8.352Z"/></g></svg>`,
+  "SP-17-45RNBS": `<svg width="100%" height="100%" viewBox="0 0 492 414" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板17" x="0" y="0" width="491.402" height="413.386" style="fill:none;"/><clipPath id="clip_45RNB">
+<rect x="0" y="0" width="491.402" height="413.386"/></clipPath><g clip-path="url(#clip_45RNB)">
+<path d="M292.985,413.386c-4.699,0 -9.205,-1.867 -12.527,-5.189c-33.82,-33.82 -223.1,-223.1 -274.331,-274.331c-3.406,-3.406 -5.279,-8.052 -5.186,-12.868c0.093,-4.816 2.142,-9.387 5.677,-12.66c76.052,-69.532 175.54,-108.338 279.029,-108.338l188.976,-0c9.785,0 17.717,7.932 17.717,17.717c0,67.773 0,310.18 0,377.953c-0,9.785 -7.932,17.717 -17.717,17.717c-43.155,-0 -152.327,-0 -181.638,-0Z" style="fill:#f2af0d;"/><path d="M292.985,413.386c-4.699,0 -9.205,-1.867 -12.527,-5.189l-274.331,-274.331c-3.406,-3.406 -5.279,-8.052 -5.186,-12.868c0.093,-4.816 2.142,-9.387 5.677,-12.66c76.052,-69.532 175.54,-108.338 279.029,-108.338l188.976,0c9.785,0 17.717,7.932 17.717,17.717l0,377.953c-0,9.785 -7.932,17.717 -17.717,17.717l-181.638,-0Zm-0,-4.167l181.638,-0c7.483,-0 13.55,-6.066 13.55,-13.55l-0,-377.953c-0,-7.483 -6.066,-13.55 -13.55,-13.55l-188.976,0c-102.441,0 -200.921,38.41 -276.205,107.235c-2.699,2.502 -4.264,5.996 -4.335,9.676c-0.071,3.683 1.361,7.237 3.966,9.842l274.331,274.331c2.541,2.541 5.988,3.969 9.581,3.969Z"/><g><path d="M283.305,248.952l0,-20.236l-36.667,0l0,-9.513l38.57,-54.77l8.475,0l0,54.77l11.415,0l0,9.513l-11.415,0l0,20.236l-10.377,0Zm0,-29.749l0,-38.108l-26.463,38.108l26.463,0Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M315.706,226.814l10.896,-0.922c0.807,5.304 2.681,9.292 5.621,11.963c2.94,2.671 6.486,4.007 10.637,4.007c4.997,0 9.224,-1.883 12.684,-5.65c3.459,-3.767 5.189,-8.763 5.189,-14.99c0,-5.919 -1.662,-10.589 -4.987,-14.01c-3.325,-3.421 -7.677,-5.131 -13.058,-5.131c-3.344,0 -6.361,0.759 -9.051,2.277c-2.69,1.518 -4.804,3.488 -6.342,5.909l-9.743,-1.268l8.187,-43.412l42.029,0l0,9.916l-33.727,0l-4.555,22.715c5.073,-3.536 10.397,-5.304 15.97,-5.304c7.38,0 13.606,2.556 18.679,7.668c5.073,5.112 7.61,11.684 7.61,19.717c0,7.649 -2.229,14.259 -6.688,19.833c-5.419,6.841 -12.818,10.262 -22.196,10.262c-7.687,0 -13.962,-2.152 -18.824,-6.457c-4.862,-4.305 -7.639,-10.012 -8.331,-17.123Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M383.852,178.962c0,-4.42 1.566,-8.187 4.699,-11.3c3.132,-3.113 6.889,-4.67 11.271,-4.67c4.458,0 8.244,1.557 11.358,4.67c3.113,3.113 4.67,6.88 4.67,11.3c0,4.42 -1.566,8.196 -4.699,11.329c-3.132,3.132 -6.909,4.699 -11.329,4.699c-4.382,0 -8.139,-1.557 -11.271,-4.67c-3.132,-3.113 -4.699,-6.899 -4.699,-11.358Zm6.284,0c0,2.69 0.951,4.987 2.854,6.889c1.903,1.903 4.199,2.854 6.889,2.854c2.652,0 4.929,-0.951 6.832,-2.854c1.903,-1.903 2.854,-4.199 2.854,-6.889c0,-2.69 -0.951,-4.987 -2.854,-6.889c-1.903,-1.903 -4.18,-2.854 -6.832,-2.854c-2.69,0 -4.987,0.951 -6.889,2.854c-1.903,1.903 -2.854,4.199 -2.854,6.889Z" style="fill:#ffffff;fill-rule:nonzero;"/></g><rect x="479.591" y="64.961" width="11.811" height="47.244"/><rect x="479.591" y="301.181" width="11.811" height="47.244"/><path d="M47.884,158.92l33.407,33.407l-8.352,8.352l-33.407,-33.407l8.352,-8.352Z"/><path d="M214.917,325.953l33.407,33.407l-8.352,8.352l-33.407,-33.407l8.352,-8.352Z"/></g></svg>`,
+  "SP-17-45LNBS": `<svg width="100%" height="100%" viewBox="0 0 492 414" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板18" x="0" y="0" width="491.402" height="413.386" style="fill:none;"/><clipPath id="clip_45LNB">
+<rect x="0" y="0" width="491.402" height="413.386"/></clipPath><g clip-path="url(#clip_45LNB)">
+<path d="M199.354,413.386c4.699,0 9.205,-1.867 12.527,-5.189c33.82,-33.82 223.1,-223.1 274.331,-274.331c3.406,-3.406 5.279,-8.052 5.186,-12.868c-0.093,-4.816 -2.142,-9.387 -5.677,-12.66c-76.052,-69.532 -175.54,-108.338 -279.029,-108.338l-188.976,-0c-9.785,0 -17.717,7.932 -17.717,17.717c-0,67.773 -0,310.18 -0,377.953c0,9.785 7.932,17.717 17.717,17.717c43.155,-0 152.327,-0 181.638,-0Z" style="fill:#f2af0d;"/><path d="M199.354,413.386l-181.638,0c-9.785,-0 -17.717,-7.932 -17.717,-17.717l0,-377.953c0,-9.785 7.932,-17.717 17.717,-17.717l188.976,0c103.489,0 202.977,38.806 279.029,108.338c3.535,3.273 5.584,7.843 5.677,12.66c0.093,4.816 -1.78,9.462 -5.186,12.868l-274.331,274.331c-3.322,3.322 -7.829,5.189 -12.527,5.189Zm0,-4.167c3.594,0 7.04,-1.428 9.581,-3.969l274.331,-274.331c2.605,-2.605 4.037,-6.158 3.966,-9.842c-0.071,-3.68 -1.636,-7.173 -4.335,-9.676c-75.285,-68.824 -173.765,-107.235 -276.205,-107.235l-188.976,0c-7.483,0 -13.55,6.066 -13.55,13.55l0,377.953c0,7.483 6.066,13.55 13.55,13.55l181.638,-0Z"/><g><path d="M113.158,248.952l0,-20.236l-36.667,0l0,-9.513l38.57,-54.77l8.475,0l0,54.77l11.415,0l0,9.513l-11.415,0l0,20.236l-10.377,0Zm0,-29.749l0,-38.108l-26.463,38.108l26.463,0Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M145.559,226.814l10.896,-0.922c0.807,5.304 2.681,9.292 5.621,11.963c2.94,2.671 6.486,4.007 10.637,4.007c4.997,0 9.224,-1.883 12.684,-5.65c3.459,-3.767 5.189,-8.763 5.189,-14.99c0,-5.919 -1.662,-10.589 -4.987,-14.01c-3.325,-3.421 -7.677,-5.131 -13.058,-5.131c-3.344,0 -6.361,0.759 -9.051,2.277c-2.69,1.518 -4.804,3.488 -6.342,5.909l-9.743,-1.268l8.187,-43.412l42.029,0l0,9.916l-33.727,0l-4.555,22.715c5.073,-3.536 10.397,-5.304 15.97,-5.304c7.38,0 13.606,2.556 18.679,7.668c5.073,5.112 7.61,11.684 7.61,19.717c0,7.649 -2.229,14.259 -6.688,19.833c-5.419,6.841 -12.818,10.262 -22.196,10.262c-7.687,0 -13.962,-2.152 -18.824,-6.457c-4.862,-4.305 -7.639,-10.012 -8.331,-17.123Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M213.704,178.962c0,-4.42 1.566,-8.187 4.699,-11.3c3.132,-3.113 6.889,-4.67 11.271,-4.67c4.458,0 8.244,1.557 11.358,4.67c3.113,3.113 4.67,6.88 4.67,11.3c0,4.42 -1.566,8.196 -4.699,11.329c-3.132,3.132 -6.909,4.699 -11.329,4.699c-4.382,0 -8.139,-1.557 -11.271,-4.67c-3.132,-3.113 -4.699,-6.899 -4.699,-11.358Zm6.284,0c0,2.69 0.951,4.987 2.854,6.889c1.903,1.903 4.199,2.854 6.889,2.854c2.652,0 4.929,-0.951 6.832,-2.854c1.903,-1.903 2.854,-4.199 2.854,-6.889c0,-2.69 -0.951,-4.987 -2.854,-6.889c-1.903,-1.903 -4.18,-2.854 -6.832,-2.854c-2.69,0 -4.987,0.951 -6.889,2.854c-1.903,1.903 -2.854,4.199 -2.854,6.889Z" style="fill:#ffffff;fill-rule:nonzero;"/></g><rect x="0.937" y="64.961" width="11.811" height="47.244"/><rect x="0.937" y="301.181" width="11.811" height="47.244"/><path d="M444.455,158.92l-33.407,33.407l8.352,8.352l33.407,-33.407l-8.352,-8.352Z"/><path d="M277.422,325.953l-33.407,33.407l8.352,8.352l33.407,-33.407l-8.352,-8.352Z"/></g></svg>`,
+  "SP-17-30RSBS": `<svg width="100%" height="100%" viewBox="0 0 407 414" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板19" x="0" y="0" width="406.713" height="413.386" style="fill:none;"/><clipPath id="clip_30RSB">
+<rect x="0" y="0" width="406.713" height="413.386"/></clipPath><g clip-path="url(#clip_30RSB)">
+<path d="M210.249,413.386c-6.33,0 -12.178,-3.377 -15.343,-8.858c-27.407,-47.47 -156.972,-271.883 -192.532,-333.475c-2.412,-4.177 -3.016,-9.157 -1.674,-13.79c1.343,-4.633 4.516,-8.518 8.788,-10.758c58.785,-30.507 124.123,-46.505 190.532,-46.505l188.976,0c9.785,0 17.717,7.932 17.717,17.717c0,67.773 0,310.18 0,377.953c-0,9.785 -7.932,17.717 -17.717,17.717c-41.843,-0 -145.751,-0 -178.748,-0Z" style="fill:#f2af0d;"/><path d="M210.249,413.386c-6.33,0 -12.178,-3.377 -15.343,-8.858l-192.532,-333.475c-2.412,-4.177 -3.016,-9.157 -1.674,-13.79c1.343,-4.633 4.516,-8.518 8.788,-10.758c58.785,-30.507 124.123,-46.505 190.532,-46.505l188.976,0c9.785,0 17.717,7.932 17.717,17.717l0,377.953c-0,9.785 -7.932,17.717 -17.717,17.717l-178.748,-0Zm-0,-4.167l178.748,-0c7.483,-0 13.55,-6.066 13.55,-13.55l-0,-377.953c-0,-7.483 -6.066,-13.55 -13.55,-13.55l-188.976,0c-65.736,0 -130.412,15.835 -188.602,46.031c-3.264,1.714 -5.689,4.684 -6.716,8.225c-1.027,3.543 -0.564,7.352 1.28,10.547l192.532,333.475c2.42,4.192 6.894,6.775 11.735,6.775Z"/><path d="M52.382,157.67l-50.008,-86.617c-2.412,-4.177 -3.016,-9.157 -1.674,-13.79c1.343,-4.633 4.516,-8.518 8.788,-10.758c58.785,-30.507 124.123,-46.505 190.532,-46.505l188.976,0c9.785,0 17.717,7.932 17.717,17.717l0,100.394l-206.693,0c-51.832,0 -102.75,13.644 -147.638,39.559Z" style="fill:#c0c0c0;"/><path d="M52.382,157.67l-50.008,-86.617c-2.412,-4.177 -3.016,-9.157 -1.674,-13.79c1.343,-4.633 4.516,-8.518 8.788,-10.758c58.785,-30.507 124.123,-46.505 190.532,-46.505l188.976,0c9.785,0 17.717,7.932 17.717,17.717l0,100.394l-206.693,0c-51.832,0 -102.75,13.644 -147.638,39.559Zm1.54,-5.667c44.629,-24.945 94.925,-38.059 146.098,-38.059l202.526,-0l-0,-96.227c-0,-7.483 -6.066,-13.55 -13.55,-13.55l-188.976,0c-65.736,0 -130.412,15.835 -188.602,46.031c-3.264,1.714 -5.689,4.684 -6.716,8.225c-1.027,3.543 -0.564,7.352 1.28,10.547l47.939,83.033Z"/><rect x="394.902" y="64.961" width="11.811" height="47.244"/><rect x="394.902" y="301.181" width="11.811" height="47.244"/><path d="M36.224,106.061l23.622,40.915l-10.229,5.906l-23.622,-40.915l10.229,-5.906Z"/><path d="M154.335,310.634l23.622,40.915l-10.229,5.906l-23.622,-40.915l10.229,-5.906Z"/><g><path d="M187.198,268.243l10.377,-1.384c1.191,5.881 3.219,10.118 6.082,12.712c2.863,2.594 6.351,3.892 10.464,3.892c4.881,0 9.003,-1.691 12.367,-5.073c3.363,-3.382 5.045,-7.572 5.045,-12.568c0,-4.766 -1.557,-8.696 -4.67,-11.79c-3.113,-3.094 -7.072,-4.641 -11.876,-4.641c-1.96,0 -4.401,0.384 -7.322,1.153l1.153,-9.109c0.692,0.077 1.249,0.115 1.672,0.115c4.42,0 8.398,-1.153 11.934,-3.459c3.536,-2.306 5.304,-5.861 5.304,-10.666c0,-3.805 -1.288,-6.957 -3.863,-9.455c-2.575,-2.498 -5.9,-3.747 -9.974,-3.747c-4.036,0 -7.399,1.268 -10.089,3.805c-2.69,2.537 -4.42,6.342 -5.189,11.415l-10.377,-1.845c1.268,-6.957 4.151,-12.347 8.648,-16.172c4.497,-3.824 10.089,-5.736 16.777,-5.736c4.612,0 8.859,0.99 12.741,2.969c3.882,1.979 6.851,4.679 8.907,8.1c2.056,3.421 3.084,7.053 3.084,10.896c0,3.651 -0.98,6.976 -2.94,9.974c-1.96,2.998 -4.862,5.381 -8.706,7.149c4.997,1.153 8.879,3.546 11.646,7.178c2.767,3.632 4.151,8.177 4.151,13.635c0,7.38 -2.69,13.635 -8.071,18.766c-5.381,5.131 -12.184,7.697 -20.409,7.697c-7.418,0 -13.577,-2.21 -18.478,-6.63c-4.9,-4.42 -7.697,-10.147 -8.388,-17.181Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M252.807,248.872c0,-9.993 1.028,-18.036 3.084,-24.128c2.056,-6.092 5.112,-10.791 9.167,-14.096c4.055,-3.305 9.157,-4.958 15.307,-4.958c4.535,0 8.513,0.913 11.934,2.739c3.421,1.826 6.246,4.458 8.475,7.898c2.229,3.44 3.978,7.629 5.246,12.568c1.268,4.939 1.903,11.598 1.903,19.977c0,9.916 -1.019,17.92 -3.056,24.012c-2.037,6.092 -5.083,10.8 -9.138,14.125c-4.055,3.325 -9.176,4.987 -15.364,4.987c-8.148,0 -14.548,-2.921 -19.198,-8.763c-5.573,-7.034 -8.36,-18.487 -8.36,-34.361Zm10.666,0c0,13.875 1.624,23.109 4.872,27.702c3.248,4.593 7.255,6.889 12.021,6.889c4.766,0 8.773,-2.306 12.021,-6.918c3.248,-4.612 4.872,-13.837 4.872,-27.673c0,-13.914 -1.624,-23.157 -4.872,-27.731c-3.248,-4.574 -7.293,-6.861 -12.136,-6.861c-4.766,0 -8.571,2.018 -11.415,6.054c-3.574,5.15 -5.362,14.663 -5.362,28.538Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M320.952,220.564c0,-4.42 1.566,-8.187 4.699,-11.3c3.132,-3.113 6.889,-4.67 11.271,-4.67c4.458,0 8.244,1.557 11.358,4.67c3.113,3.113 4.67,6.88 4.67,11.3c0,4.42 -1.566,8.196 -4.699,11.329c-3.132,3.132 -6.909,4.699 -11.329,4.699c-4.382,0 -8.139,-1.557 -11.271,-4.67c-3.132,-3.113 -4.699,-6.899 -4.699,-11.358Zm6.284,0c0,2.69 0.951,4.987 2.854,6.889c1.903,1.903 4.199,2.854 6.889,2.854c2.652,0 4.929,-0.951 6.832,-2.854c1.903,-1.903 2.854,-4.199 2.854,-6.889c0,-2.69 -0.951,-4.987 -2.854,-6.889c-1.903,-1.903 -4.18,-2.854 -6.832,-2.854c-2.69,0 -4.987,0.951 -6.889,2.854c-1.903,1.903 -2.854,4.199 -2.854,6.889Z" style="fill:#ffffff;fill-rule:nonzero;"/></g></g></svg>`,
+  "SP-17-30LSBS": `<svg width="100%" height="100%" viewBox="0 0 407 414" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板20" x="0" y="0" width="406.713" height="413.386" style="fill:none;"/><clipPath id="clip_30LSB">
+<rect x="0" y="0" width="406.713" height="413.386"/></clipPath><g clip-path="url(#clip_30LSB)">
+<path d="M196.464,413.386c6.33,0 12.178,-3.377 15.343,-8.858c27.407,-47.47 156.972,-271.883 192.532,-333.475c2.412,-4.177 3.016,-9.157 1.674,-13.79c-1.343,-4.633 -4.516,-8.518 -8.788,-10.758c-58.785,-30.507 -124.123,-46.505 -190.532,-46.505l-188.976,-0c-9.785,0 -17.717,7.932 -17.717,17.717c-0,67.773 -0,310.18 -0,377.953c0,9.785 7.932,17.717 17.717,17.717c41.843,-0 145.751,-0 178.748,-0Z" style="fill:#f2af0d;"/><path d="M196.464,413.386l-178.748,0c-9.785,-0 -17.717,-7.932 -17.717,-17.717l0,-377.953c0,-9.785 7.932,-17.717 17.717,-17.717l188.976,0c66.409,0 131.747,15.998 190.532,46.505c4.272,2.24 7.445,6.126 8.788,10.758c1.343,4.633 0.738,9.613 -1.674,13.79l-192.532,333.475c-3.165,5.482 -9.013,8.858 -15.343,8.858Zm0,-4.167c4.841,0 9.314,-2.583 11.735,-6.775l192.532,-333.475c1.845,-3.195 2.307,-7.004 1.28,-10.547c-1.026,-3.541 -3.451,-6.512 -6.716,-8.225c-58.19,-30.196 -122.866,-46.031 -188.602,-46.031l-188.976,0c-7.483,0 -13.55,6.066 -13.55,13.55l0,377.953c0,7.483 6.066,13.55 13.55,13.55l178.748,-0Z"/><path d="M354.331,157.67l50.008,-86.617c2.412,-4.177 3.016,-9.157 1.674,-13.79c-1.343,-4.633 -4.516,-8.518 -8.788,-10.758c-58.785,-30.507 -124.123,-46.505 -190.532,-46.505l-188.976,0c-9.785,0 -17.717,7.932 -17.717,17.717l-0,100.394l206.693,0c51.832,0 102.75,13.644 147.638,39.559Z" style="fill:#c0c0c0;"/><path d="M354.331,157.67c-44.888,-25.916 -95.806,-39.559 -147.638,-39.559l-206.693,0l0,-100.394c0,-9.785 7.932,-17.717 17.717,-17.717l188.976,0c66.409,0 131.747,15.998 190.532,46.505c4.272,2.24 7.445,6.126 8.788,10.758c1.343,4.633 0.738,9.613 -1.674,13.79l-50.008,86.617Zm-1.54,-5.667l47.939,-83.034c1.845,-3.195 2.307,-7.004 1.28,-10.547c-1.026,-3.541 -3.451,-6.512 -6.716,-8.225c-58.19,-30.196 -122.866,-46.031 -188.602,-46.031l-188.976,0c-7.483,0 -13.55,6.066 -13.55,13.55l-0,96.227l202.526,0c51.174,0 101.469,13.114 146.098,38.059Z"/><rect x="0" y="64.961" width="11.811" height="47.244"/><rect x="0" y="301.181" width="11.811" height="47.244"/><path d="M370.489,106.061l-23.622,40.915l10.229,5.906l23.622,-40.915l-10.229,-5.906Z"/><path d="M252.378,310.634l-23.622,40.915l10.229,5.906l23.622,-40.915l-10.229,-5.906Z"/><g><path d="M72.421,268.243l10.377,-1.384c1.191,5.881 3.219,10.118 6.082,12.712c2.863,2.594 6.351,3.892 10.464,3.892c4.881,0 9.003,-1.691 12.367,-5.073c3.363,-3.382 5.045,-7.572 5.045,-12.568c0,-4.766 -1.557,-8.696 -4.67,-11.79c-3.113,-3.094 -7.072,-4.641 -11.876,-4.641c-1.96,0 -4.401,0.384 -7.322,1.153l1.153,-9.109c0.692,0.077 1.249,0.115 1.672,0.115c4.42,0 8.398,-1.153 11.934,-3.459c3.536,-2.306 5.304,-5.861 5.304,-10.666c0,-3.805 -1.288,-6.957 -3.863,-9.455c-2.575,-2.498 -5.9,-3.747 -9.974,-3.747c-4.036,0 -7.399,1.268 -10.089,3.805c-2.69,2.537 -4.42,6.342 -5.189,11.415l-10.377,-1.845c1.268,-6.957 4.151,-12.347 8.648,-16.172c4.497,-3.824 10.089,-5.736 16.777,-5.736c4.612,0 8.859,0.99 12.741,2.969c3.882,1.979 6.851,4.679 8.907,8.1c2.056,3.421 3.084,7.053 3.084,10.896c0,3.651 -0.98,6.976 -2.94,9.974c-1.96,2.998 -4.862,5.381 -8.706,7.149c4.997,1.153 8.879,3.546 11.646,7.178c2.767,3.632 4.151,8.177 4.151,13.635c0,7.38 -2.69,13.635 -8.071,18.766c-5.381,5.131 -12.184,7.697 -20.409,7.697c-7.418,0 -13.577,-2.21 -18.478,-6.63c-4.9,-4.42 -7.697,-10.147 -8.388,-17.181Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M138.03,248.872c0,-9.993 1.028,-18.036 3.084,-24.128c2.056,-6.092 5.112,-10.791 9.167,-14.096c4.055,-3.305 9.157,-4.958 15.307,-4.958c4.535,0 8.513,0.913 11.934,2.739c3.421,1.826 6.246,4.458 8.475,7.898c2.229,3.44 3.978,7.629 5.246,12.568c1.268,4.939 1.903,11.598 1.903,19.977c0,9.916 -1.019,17.92 -3.056,24.012c-2.037,6.092 -5.083,10.8 -9.138,14.125c-4.055,3.325 -9.176,4.987 -15.364,4.987c-8.148,0 -14.548,-2.921 -19.198,-8.763c-5.573,-7.034 -8.36,-18.487 -8.36,-34.361Zm10.666,0c0,13.875 1.624,23.109 4.872,27.702c3.248,4.593 7.255,6.889 12.021,6.889c4.766,0 8.773,-2.306 12.021,-6.918c3.248,-4.612 4.872,-13.837 4.872,-27.673c0,-13.914 -1.624,-23.157 -4.872,-27.731c-3.248,-4.574 -7.293,-6.861 -12.136,-6.861c-4.766,0 -8.571,2.018 -11.415,6.054c-3.574,5.15 -5.362,14.663 -5.362,28.538Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M206.175,220.564c0,-4.42 1.566,-8.187 4.699,-11.3c3.132,-3.113 6.889,-4.67 11.271,-4.67c4.458,0 8.244,1.557 11.358,4.67c3.113,3.113 4.67,6.88 4.67,11.3c0,4.42 -1.566,8.196 -4.699,11.329c-3.132,3.132 -6.909,4.699 -11.329,4.699c-4.382,0 -8.139,-1.557 -11.271,-4.67c-3.132,-3.113 -4.699,-6.899 -4.699,-11.358Zm6.284,0c0,2.69 0.951,4.987 2.854,6.889c1.903,1.903 4.199,2.854 6.889,2.854c2.652,0 4.929,-0.951 6.832,-2.854c1.903,-1.903 2.854,-4.199 2.854,-6.889c0,-2.69 -0.951,-4.987 -2.854,-6.889c-1.903,-1.903 -4.18,-2.854 -6.832,-2.854c-2.69,0 -4.987,0.951 -6.889,2.854c-1.903,1.903 -2.854,4.199 -2.854,6.889Z" style="fill:#ffffff;fill-rule:nonzero;"/></g></g></svg>`,
+  "SP-17-30RNBS": `<svg width="100%" height="100%" viewBox="0 0 407 414" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板21" x="0" y="0" width="406.713" height="413.386" style="fill:none;"/><clipPath id="clip_30RNB">
+<rect x="0" y="0" width="406.713" height="413.386"/></clipPath><g clip-path="url(#clip_30RNB)">
+<path d="M210.249,413.386c-6.33,0 -12.178,-3.377 -15.343,-8.858c-27.407,-47.47 -156.972,-271.883 -192.532,-333.475c-2.412,-4.177 -3.016,-9.157 -1.674,-13.79c1.343,-4.633 4.516,-8.518 8.788,-10.758c58.785,-30.507 124.123,-46.505 190.532,-46.505l188.976,-0c9.785,0 17.717,7.932 17.717,17.717c0,67.773 0,310.18 0,377.953c-0,9.785 -7.932,17.717 -17.717,17.717c-41.843,-0 -145.751,-0 -178.748,-0Z" style="fill:#f2af0d;"/><path d="M210.249,413.386c-6.33,0 -12.178,-3.377 -15.343,-8.858l-192.532,-333.475c-2.412,-4.177 -3.016,-9.157 -1.674,-13.79c1.343,-4.633 4.516,-8.518 8.788,-10.758c58.785,-30.507 124.123,-46.505 190.532,-46.505l188.976,0c9.785,0 17.717,7.932 17.717,17.717l0,377.953c-0,9.785 -7.932,17.717 -17.717,17.717l-178.748,-0Zm-0,-4.167l178.748,-0c7.483,-0 13.55,-6.066 13.55,-13.55l-0,-377.953c-0,-7.483 -6.066,-13.55 -13.55,-13.55l-188.976,0c-65.736,0 -130.412,15.835 -188.602,46.031c-3.264,1.714 -5.689,4.684 -6.716,8.225c-1.027,3.543 -0.564,7.352 1.28,10.547l192.532,333.475c2.42,4.192 6.894,6.775 11.735,6.775Z"/><g><path d="M187.198,226.612l10.377,-1.384c1.191,5.881 3.219,10.118 6.082,12.712c2.863,2.594 6.351,3.892 10.464,3.892c4.881,0 9.003,-1.691 12.367,-5.073c3.363,-3.382 5.045,-7.572 5.045,-12.568c0,-4.766 -1.557,-8.696 -4.67,-11.79c-3.113,-3.094 -7.072,-4.641 -11.876,-4.641c-1.96,0 -4.401,0.384 -7.322,1.153l1.153,-9.109c0.692,0.077 1.249,0.115 1.672,0.115c4.42,0 8.398,-1.153 11.934,-3.459c3.536,-2.306 5.304,-5.861 5.304,-10.666c0,-3.805 -1.288,-6.957 -3.863,-9.455c-2.575,-2.498 -5.9,-3.747 -9.974,-3.747c-4.036,0 -7.399,1.268 -10.089,3.805c-2.69,2.537 -4.42,6.342 -5.189,11.415l-10.377,-1.845c1.268,-6.957 4.151,-12.347 8.648,-16.172c4.497,-3.824 10.089,-5.736 16.777,-5.736c4.612,0 8.859,0.99 12.741,2.969c3.882,1.979 6.851,4.679 8.907,8.1c2.056,3.421 3.084,7.053 3.084,10.896c0,3.651 -0.98,6.976 -2.94,9.974c-1.96,2.998 -4.862,5.381 -8.706,7.149c4.997,1.153 8.879,3.546 11.646,7.178c2.767,3.632 4.151,8.177 4.151,13.635c0,7.38 -2.69,13.635 -8.071,18.766c-5.381,5.131 -12.184,7.697 -20.409,7.697c-7.418,0 -13.577,-2.21 -18.478,-6.63c-4.9,-4.42 -7.697,-10.147 -8.388,-17.181Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M252.807,207.241c0,-9.993 1.028,-18.036 3.084,-24.128c2.056,-6.092 5.112,-10.791 9.167,-14.096c4.055,-3.305 9.157,-4.958 15.307,-4.958c4.535,0 8.513,0.913 11.934,2.739c3.421,1.826 6.246,4.458 8.475,7.898c2.229,3.44 3.978,7.629 5.246,12.568c1.268,4.939 1.903,11.598 1.903,19.977c0,9.916 -1.019,17.92 -3.056,24.012c-2.037,6.092 -5.083,10.8 -9.138,14.125c-4.055,3.325 -9.176,4.987 -15.364,4.987c-8.148,0 -14.548,-2.921 -19.198,-8.763c-5.573,-7.034 -8.36,-18.487 -8.36,-34.361Zm10.666,0c0,13.875 1.624,23.109 4.872,27.702c3.248,4.593 7.255,6.889 12.021,6.889c4.766,0 8.773,-2.306 12.021,-6.918c3.248,-4.612 4.872,-13.837 4.872,-27.673c0,-13.914 -1.624,-23.157 -4.872,-27.731c-3.248,-4.574 -7.293,-6.861 -12.136,-6.861c-4.766,0 -8.571,2.018 -11.415,6.054c-3.574,5.15 -5.362,14.663 -5.362,28.538Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M320.952,178.933c0,-4.42 1.566,-8.187 4.699,-11.3c3.132,-3.113 6.889,-4.67 11.271,-4.67c4.458,0 8.244,1.557 11.358,4.67c3.113,3.113 4.67,6.88 4.67,11.3c0,4.42 -1.566,8.196 -4.699,11.329c-3.132,3.132 -6.909,4.699 -11.329,4.699c-4.382,0 -8.139,-1.557 -11.271,-4.67c-3.132,-3.113 -4.699,-6.899 -4.699,-11.358Zm6.284,0c0,2.69 0.951,4.987 2.854,6.889c1.903,1.903 4.199,2.854 6.889,2.854c2.652,0 4.929,-0.951 6.832,-2.854c1.903,-1.903 2.854,-4.199 2.854,-6.889c0,-2.69 -0.951,-4.987 -2.854,-6.889c-1.903,-1.903 -4.18,-2.854 -6.832,-2.854c-2.69,0 -4.987,0.951 -6.889,2.854c-1.903,1.903 -2.854,4.199 -2.854,6.889Z" style="fill:#ffffff;fill-rule:nonzero;"/></g><rect x="394.915" y="64.961" width="11.811" height="47.244"/><rect x="394.915" y="301.181" width="11.811" height="47.244"/><path d="M36.237,106.061l23.622,40.915l-10.229,5.906l-23.622,-40.915l10.229,-5.906Z"/><path d="M154.348,310.634l23.622,40.915l-10.229,5.906l-23.622,-40.915l10.229,-5.906Z"/></g></svg>`,
+  "SP-17-30LNBS": `<svg width="100%" height="100%" viewBox="0 0 407 414" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板22" x="0" y="0" width="406.713" height="413.386" style="fill:none;"/><clipPath id="clip_30LNBS">
+<rect x="0" y="0" width="406.713" height="413.386"/></clipPath><g clip-path="url(#clip_30LNBS)">
+<path d="M196.464,413.386c6.33,0 12.178,-3.377 15.343,-8.858c27.407,-47.47 156.972,-271.883 192.532,-333.475c2.412,-4.177 3.016,-9.157 1.674,-13.79c-1.343,-4.633 -4.516,-8.518 -8.788,-10.758c-58.785,-30.507 -124.123,-46.505 -190.532,-46.505l-188.976,0c-9.785,0 -17.717,7.932 -17.717,17.717c-0,67.773 -0,310.18 -0,377.953c0,9.785 7.932,17.717 17.717,17.717c41.843,-0 145.751,-0 178.748,-0Z" style="fill:#f2af0d;"/><path d="M196.464,413.386l-178.748,0c-9.785,-0 -17.717,-7.932 -17.717,-17.717l0,-377.953c0,-9.785 7.932,-17.717 17.717,-17.717l188.976,0c66.409,0 131.747,15.998 190.532,46.505c4.272,2.24 7.445,6.126 8.788,10.758c1.343,4.633 0.738,9.613 -1.674,13.79l-192.532,333.475c-3.165,5.482 -9.013,8.858 -15.343,8.858Zm0,-4.167c4.841,0 9.314,-2.583 11.735,-6.775l192.532,-333.475c1.845,-3.195 2.307,-7.004 1.28,-10.547c-1.026,-3.541 -3.451,-6.512 -6.716,-8.225c-58.19,-30.196 -122.866,-46.031 -188.602,-46.031l-188.976,0c-7.483,0 -13.55,6.066 -13.55,13.55l0,377.953c0,7.483 6.066,13.55 13.55,13.55l178.748,-0Z"/><g><path d="M79.906,226.612l10.377,-1.384c1.191,5.881 3.219,10.118 6.082,12.712c2.863,2.594 6.351,3.892 10.464,3.892c4.881,0 9.003,-1.691 12.367,-5.073c3.363,-3.382 5.045,-7.572 5.045,-12.568c0,-4.766 -1.557,-8.696 -4.67,-11.79c-3.113,-3.094 -7.072,-4.641 -11.876,-4.641c-1.96,0 -4.401,0.384 -7.322,1.153l1.153,-9.109c0.692,0.077 1.249,0.115 1.672,0.115c4.42,0 8.398,-1.153 11.934,-3.459c3.536,-2.306 5.304,-5.861 5.304,-10.666c0,-3.805 -1.288,-6.957 -3.863,-9.455c-2.575,-2.498 -5.9,-3.747 -9.974,-3.747c-4.036,0 -7.399,1.268 -10.089,3.805c-2.69,2.537 -4.42,6.342 -5.189,11.415l-10.377,-1.845c1.268,-6.957 4.151,-12.347 8.648,-16.172c4.497,-3.824 10.089,-5.736 16.777,-5.736c4.612,0 8.859,0.99 12.741,2.969c3.882,1.979 6.851,4.679 8.907,8.1c2.056,3.421 3.084,7.053 3.084,10.896c0,3.651 -0.98,6.976 -2.94,9.974c-1.96,2.998 -4.862,5.381 -8.706,7.149c4.997,1.153 8.879,3.546 11.646,7.178c2.767,3.632 4.151,8.177 4.151,13.635c0,7.38 -2.69,13.635 -8.071,18.766c-5.381,5.131 -12.184,7.697 -20.409,7.697c-7.418,0 -13.577,-2.21 -18.478,-6.63c-4.9,-4.42 -7.697,-10.147 -8.388,-17.181Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M145.515,207.241c0,-9.993 1.028,-18.036 3.084,-24.128c2.056,-6.092 5.112,-10.791 9.167,-14.096c4.055,-3.305 9.157,-4.958 15.307,-4.958c4.535,0 8.513,0.913 11.934,2.739c3.421,1.826 6.246,4.458 8.475,7.898c2.229,3.44 3.978,7.629 5.246,12.568c1.268,4.939 1.903,11.598 1.903,19.977c0,9.916 -1.019,17.92 -3.056,24.012c-2.037,6.092 -5.083,10.8 -9.138,14.125c-4.055,3.325 -9.176,4.987 -15.364,4.987c-8.148,0 -14.548,-2.921 -19.198,-8.763c-5.573,-7.034 -8.36,-18.487 -8.36,-34.361Zm10.666,0c0,13.875 1.624,23.109 4.872,27.702c3.248,4.593 7.255,6.889 12.021,6.889c4.766,0 8.773,-2.306 12.021,-6.918c3.248,-4.612 4.872,-13.837 4.872,-27.673c0,-13.914 -1.624,-23.157 -4.872,-27.731c-3.248,-4.574 -7.293,-6.861 -12.136,-6.861c-4.766,0 -8.571,2.018 -11.415,6.054c-3.574,5.15 -5.362,14.663 -5.362,28.538Z" style="fill:#ffffff;fill-rule:nonzero;"/><path d="M213.661,178.933c0,-4.42 1.566,-8.187 4.699,-11.3c3.132,-3.113 6.889,-4.67 11.271,-4.67c4.458,0 8.244,1.557 11.358,4.67c3.113,3.113 4.67,6.88 4.67,11.3c0,4.42 -1.566,8.196 -4.699,11.329c-3.132,3.132 -6.909,4.699 -11.329,4.699c-4.382,0 -8.139,-1.557 -11.271,-4.67c-3.132,-3.113 -4.699,-6.899 -4.699,-11.358Zm6.284,0c0,2.69 0.951,4.987 2.854,6.889c1.903,1.903 4.199,2.854 6.889,2.854c2.652,0 4.929,-0.951 6.832,-2.854c1.903,-1.903 2.854,-4.199 2.854,-6.889c0,-2.69 -0.951,-4.987 -2.854,-6.889c-1.903,-1.903 -4.18,-2.854 -6.832,-2.854c-2.69,0 -4.987,0.951 -6.889,2.854c-1.903,1.903 -2.854,4.199 -2.854,6.889Z" style="fill:#ffffff;fill-rule:nonzero;"/></g><rect x="0" y="64.961" width="11.811" height="47.244"/><rect x="0" y="301.181" width="11.811" height="47.244"/><path d="M370.489,106.061l-23.622,40.915l10.229,5.906l23.622,-40.915l-10.229,-5.906Z"/><path d="M252.378,310.634l-23.622,40.915l10.229,5.906l23.622,-40.915l-10.229,-5.906Z"/></g></svg>`,
+  "SP-17-RPS": `<svg width="100%" height="100%" viewBox="0 0 237 237" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板23" x="0" y="0" width="236.22" height="236.22" style="fill:none;"/><clipPath id="clip_RPS">
+<rect x="0" y="0" width="236.22" height="236.22"/></clipPath><g clip-path="url(#clip_RPS)">
+<circle cx="118.11" cy="118.11" r="118.11" style="fill:#f2af0d;"/><path d="M118.11,0c65.187,0 118.11,52.923 118.11,118.11c0,65.187 -52.923,118.11 -118.11,118.11c-65.187,0 -118.11,-52.923 -118.11,-118.11c0,-65.187 52.923,-118.11 118.11,-118.11Zm0,4.167c-62.887,0 -113.944,51.056 -113.944,113.944c0,62.887 51.056,113.944 113.944,113.944c62.887,0 113.944,-51.056 113.944,-113.944c0,-62.887 -51.056,-113.944 -113.944,-113.944Z"/></g></svg>`
+};
+
+const SOFA_MODELS = {
+  "straight": [
+    { "id": "SP-17-1TRBS",  "name": "單人有椅背右扶手", "width": 700,  "height": 700, "spec": "700*700*750" },
+    { "id": "SP-17-1TLBS",  "name": "單人有椅背左扶手", "width": 700,  "height": 700, "spec": "700*700*750" },
+    { "id": "SP-17-1TSBS",  "name": "單人直型椅背",     "width": 700,  "height": 700, "spec": "700*700*750" },
+    { "id": "SP-17-1TNBS",  "name": "單人無椅背",       "width": 700,  "height": 700, "spec": "700*700*430" },
+    { "id": "SP-17-2TRBS",  "name": "雙人有椅背右扶手", "width": 1400, "height": 700, "spec": "1400*700*750" },
+    { "id": "SP-17-2TLBS",  "name": "雙人有椅背左扶手", "width": 1400, "height": 700, "spec": "1400*700*750" },
+    { "id": "SP-17-2TSBS",  "name": "雙人直型椅背",     "width": 1400, "height": 700, "spec": "1400*700*750" },
+    { "id": "SP-17-2TNBS",  "name": "雙人無椅背",       "width": 1400, "height": 700, "spec": "1400*700*430" },
+    { "id": "SP-17-1.5TRBS","name": "1.5人右椅背",      "width": 1050, "height": 700, "spec": "1050*700*750" },
+    { "id": "SP-17-1.5TLBS","name": "1.5人左椅背",      "width": 1050, "height": 700, "spec": "1050*700*750" }
+  ],
+  "corner": [
+    { "id": "SP-17-60RSBS", "name": "60°右轉角沙發有椅背", "width": 945, "height": 700, "spec": "945*700*750" },
+    { "id": "SP-17-60LSBS", "name": "60°左轉角沙發有椅背", "width": 945, "height": 700, "spec": "945*700*750" },
+    { "id": "SP-17-60RNBS", "name": "60°右轉角沙發無椅背", "width": 945, "height": 700, "spec": "945*700*430" },
+    { "id": "SP-17-60LNBS", "name": "60°左轉角沙發無椅背", "width": 945, "height": 700, "spec": "945*700*430" },
+    { "id": "SP-17-45RSBS", "name": "45°右轉角沙發有椅背", "width": 832, "height": 700, "spec": "832*700*750" },
+    { "id": "SP-17-45LSBS", "name": "45°左轉角沙發有椅背", "width": 832, "height": 700, "spec": "832*700*750" },
+    { "id": "SP-17-45RNBS", "name": "45°右轉角沙發無椅背", "width": 832, "height": 700, "spec": "832*700*430" },
+    { "id": "SP-17-45LNBS", "name": "45°左轉角沙發無椅背", "width": 832, "height": 700, "spec": "832*700*430" },
+    { "id": "SP-17-30RSBS", "name": "30°右轉角沙發有椅背", "width": 689, "height": 700, "spec": "689*700*750" },
+    { "id": "SP-17-30LSBS", "name": "30°左轉角沙發有椅背", "width": 689, "height": 700, "spec": "689*700*750" },
+    { "id": "SP-17-30RNBS", "name": "30°右轉角沙發無椅背", "width": 689, "height": 700, "spec": "689*700*430" },
+    { "id": "SP-17-30LNBS", "name": "30°左轉角沙發無椅背", "width": 689, "height": 700, "spec": "689*700*430" }
+  ],
+  "other": [
+    { "id": "SP-17-RPS", "name": "圓形矮凳", "width": 400, "height": 400, "spec": "400*400*430" }
+  ]
+};
+
+// 可選色塊顏色清單（椅背顏色 / 坐墊顏色 共用）
+const COLOR_PALETTE = [
+  "#e63e00", "#bc3a3a", "#8A1E32", "#f2af0d",
+  "#ff7f00", "#B65508", "#B9D3E5", "#7B9AB4",
+  "#6F7E8A", "#638243", "#86A55B", "#008b8b",
+  "#EBECE9", "#c0c0c0", "#838383", "#33222B"
+];
+
+// 預設顏色（對應原始固定色塊）
+const DEFAULT_BACK_COLOR = "#c0c0c0";  // 椅背顏色
+const DEFAULT_SEAT_COLOR = "#f2af0d";  // 坐墊顏色
+
+// 緩存動態生成的 Blob URL，依「型號 + 椅背顏色 + 坐墊顏色」隔離快取
+const BLOB_URL_CACHE = {};
+
+function getModuleImageUrl(modelId, seatColor, backColor) {
+  const sc = (seatColor || DEFAULT_SEAT_COLOR).toLowerCase();
+  const bc = (backColor || DEFAULT_BACK_COLOR).toLowerCase();
+  const cacheKey = `${modelId}|${sc}|${bc}`;
+
+  if (BLOB_URL_CACHE[cacheKey]) {
+    return BLOB_URL_CACHE[cacheKey];
+  }
+
+  let svgString = CUSTOM_SVG[modelId] || `<svg width="100" height="100"><rect width="100" height="100" fill="#ddd"/></svg>`;
+
+  // 使用唯一佔位符避免兩個顏色互相污染：
+  // 先將兩個原始色各換成不含 # 的安全佔位符，再統一換成目標色。
+  // 這樣即使 sc === DEFAULT_BACK_COLOR 或 bc === DEFAULT_SEAT_COLOR 也不會互串。
+  const SEAT_PLACEHOLDER = '__SEAT_COLOR__';
+  const BACK_PLACEHOLDER = '__BACK_COLOR__';
+  svgString = svgString.split(DEFAULT_SEAT_COLOR).join(SEAT_PLACEHOLDER);
+  svgString = svgString.split(DEFAULT_BACK_COLOR).join(BACK_PLACEHOLDER);
+  svgString = svgString.split(SEAT_PLACEHOLDER).join(sc);
+  svgString = svgString.split(BACK_PLACEHOLDER).join(bc);
+
+  const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  BLOB_URL_CACHE[cacheKey] = url;
+  return url;
+}
+
+// 比例尺：1mm = 0.1px
+const SCALE = 0.1;
+// 吸附閾值（邏輯像素）
+const SNAP_THRESHOLD = 3;
+// 縮放範圍
+const ZOOM_MIN = 0.3;
+const ZOOM_MAX = 3.0;
+
+let canvasZoom = 1.0;
+
+// 畫布平移偏移量（螢幕像素，不受縮放影響）
+let panX = 0;
+let panY = 0;
+
+let modules = [];
+let selectedUid = null;
+let selectedUids = new Set(); // 多選集合
+let isAggregated = false; // 配置清單是否為「彙整型號」檢視模式
+let multiSelectMode = false; // iPad 多選模式
+
+// 拖拽控制變數
+let isDragging = false;
+let isMultiDragging = false;
+let isBoxSelecting = false;
+let skipNextCanvasClick = false;
+let dragStartX = 0;
+let dragStartY = 0;
+let moduleStartX = 0;
+let moduleStartY = 0;
+let boxSelectStartX = 0;
+let boxSelectStartY = 0;
+let multiDragStartPositions = []; // 多選拖曳起始位置
+
+// ==========================================
+// 2. 初始化與下拉選單
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+  initSelectData('straight');
+  initSelectData('corner');
+  initSelectData('other');
+  
+  document.addEventListener('click', () => {
+    closeAllSelects();
+    closeAllColorPopups();
+  });
+
+  // 初始化畫布框選功能
+  initBoxSelect();
+
+  // 初始化畫布平移功能
+  initCanvasPan();
+
+  // Delete / Backspace 快捷鍵：刪除選取模塊
+  document.addEventListener('keydown', (e) => {
+    if ((e.key === 'Delete' || e.key === 'Backspace') && !e.repeat) {
+      const tag = document.activeElement && document.activeElement.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (selectedUid !== null || selectedUids.size > 0) {
+        e.preventDefault();
+        deleteSelected();
+      }
+    }
+  });
+
+  // 滑鼠滾輪縮放
+  document.getElementById('canvas').addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.1 : -0.1;
+    setZoom(canvasZoom + delta);
+  }, { passive: false });
+});
+
+// ==========================================
+// 縮放功能
+// ==========================================
+function setZoom(newZoom) {
+  canvasZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Math.round(newZoom * 10) / 10));
+  document.getElementById('zoom-label').textContent = `${Math.round(canvasZoom * 100)}%`;
+  document.getElementById('canvas').style.setProperty('--zoom', canvasZoom);
+  updateCanvasTransform();
+}
+
+// ==========================================
+// 畫布平移（Pan）功能
+// 統一套用 pan + zoom 到「模塊視口」與「背景網格」，
+// 確保平移時網格與模塊永遠同步移動
+// ==========================================
+function updateCanvasTransform() {
+  const viewport = document.getElementById('canvas-viewport');
+  const canvasEl = document.getElementById('canvas');
+  viewport.style.transform = `translate(${panX}px, ${panY}px) scale(${canvasZoom})`;
+  // 背景網格的兩層圓點使用相同的位移量，維持與模塊同步
+  canvasEl.style.backgroundPosition = `${panX}px ${panY}px, ${panX}px ${panY}px`;
+}
+
+// 重置視圖：縮放與平移一併還原
+function resetView() {
+  panX = 0;
+  panY = 0;
+  setZoom(1);
+}
+
+// 模塊置中：僅平移「視圖」（背景網格 + 模塊視口）本身，
+// 不更動任何模塊的邏輯座標，因此網格與模塊的相對位置完全不變
+function centerModulesGroup() {
+  if (modules.length === 0) {
+    showToast("畫布目前沒有任何模塊");
+    return;
+  }
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  modules.forEach(mod => {
+    const wPx = mod.width * SCALE;
+    const hPx = mod.height * SCALE;
+    minX = Math.min(minX, mod.x);
+    minY = Math.min(minY, mod.y);
+    maxX = Math.max(maxX, mod.x + wPx);
+    maxY = Math.max(maxY, mod.y + hPx);
+  });
+
+  const groupCenterX = (minX + maxX) / 2;
+  const groupCenterY = (minY + maxY) / 2;
+
+  const canvasEl = document.getElementById('canvas');
+  const viewCenterX = canvasEl.clientWidth / 2;
+  const viewCenterY = canvasEl.clientHeight / 2;
+
+  // 讓群組（以邏輯座標計算的外接框中心）對齊畫布可視區域中心
+  panX = viewCenterX - groupCenterX * canvasZoom;
+  panY = viewCenterY - groupCenterY * canvasZoom;
+  updateCanvasTransform();
+  showToast("已將模塊群組置中");
+}
+
+function initCanvasPan() {
+  const canvasEl = document.getElementById('canvas');
+
+  // ── 滑鼠：右鍵或中鍵拖曳平移 ──
+  canvasEl.addEventListener('mousedown', (e) => {
+    const wantsPan = e.button === 1 || e.button === 2;
+    if (!wantsPan) return;
+    e.preventDefault();
+
+    let isPanning = true;
+    const panStartX = e.clientX;
+    const panStartY = e.clientY;
+    const panOriginX = panX;
+    const panOriginY = panY;
+    canvasEl.style.cursor = 'grabbing';
+
+    const onPanMove = (evt) => {
+      if (!isPanning) return;
+      panX = panOriginX + (evt.clientX - panStartX);
+      panY = panOriginY + (evt.clientY - panStartY);
+      updateCanvasTransform();
+    };
+    const onPanUp = () => {
+      isPanning = false;
+      canvasEl.style.cursor = '';
+      document.removeEventListener('mousemove', onPanMove);
+      document.removeEventListener('mouseup', onPanUp);
+    };
+
+    document.addEventListener('mousemove', onPanMove);
+    document.addEventListener('mouseup', onPanUp);
+  });
+
+  canvasEl.addEventListener('contextmenu', (e) => e.preventDefault());
+  canvasEl.addEventListener('auxclick', (e) => {
+    if (e.button === 1) e.preventDefault();
+  });
+
+  // ── 觸控：雙指平移 + 捏合縮放 ──
+  let touchPanActive = false;
+  let pinchActive    = false;
+  let lastPinchDist  = 0;
+  let panTouchOriginX = 0, panTouchOriginY = 0;
+  let panTouchStartX  = 0, panTouchStartY  = 0;
+
+  function getTouchMidpoint(t1, t2) {
+    return { x: (t1.clientX + t2.clientX) / 2, y: (t1.clientY + t2.clientY) / 2 };
+  }
+  function getTouchDist(t1, t2) {
+    const dx = t1.clientX - t2.clientX, dy = t1.clientY - t2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  canvasEl.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      touchPanActive = true;
+      pinchActive    = true;
+      lastPinchDist  = getTouchDist(e.touches[0], e.touches[1]);
+      const mid = getTouchMidpoint(e.touches[0], e.touches[1]);
+      panTouchStartX  = mid.x;
+      panTouchStartY  = mid.y;
+      panTouchOriginX = panX;
+      panTouchOriginY = panY;
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  canvasEl.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2 && (touchPanActive || pinchActive)) {
+      e.preventDefault();
+      const t1 = e.touches[0], t2 = e.touches[1];
+
+      // 捏合縮放（以兩指中心為錨點）
+      const newDist = getTouchDist(t1, t2);
+      if (pinchActive && lastPinchDist > 0) {
+        const newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, canvasZoom * (newDist / lastPinchDist)));
+        const mid = getTouchMidpoint(t1, t2);
+        const rect = canvasEl.getBoundingClientRect();
+        const anchorX = mid.x - rect.left;
+        const anchorY = mid.y - rect.top;
+        panX = anchorX - (anchorX - panX) * (newZoom / canvasZoom);
+        panY = anchorY - (anchorY - panY) * (newZoom / canvasZoom);
+        canvasZoom = newZoom;
+        document.getElementById('zoom-label').textContent = `${Math.round(canvasZoom * 100)}%`;
+        document.getElementById('canvas').style.setProperty('--zoom', canvasZoom);
+        lastPinchDist = newDist;
+      }
+
+      // 雙指平移
+      if (touchPanActive) {
+        const mid = getTouchMidpoint(t1, t2);
+        panX = panTouchOriginX + (mid.x - panTouchStartX);
+        panY = panTouchOriginY + (mid.y - panTouchStartY);
+      }
+
+      updateCanvasTransform();
+    }
+  }, { passive: false });
+
+  canvasEl.addEventListener('touchend', (e) => {
+    if (e.touches.length < 2) {
+      touchPanActive = false;
+      pinchActive    = false;
+      lastPinchDist  = 0;
+    }
+  }, { passive: true });
+}
+
+// ==========================================
+// 吸附功能：支援多邊形輪廓（含斜邊）的線段對線段精確吸附
+// ==========================================
+
+/**
+ * 各型號輪廓頂點（正規化座標，x/y 均為 0~1）
+ * 頂點順序為順時針封閉多邊形。
+ * null = 使用矩形包圍盒。
+ */
+const MODULE_OUTLINE = (() => {
+  const outlines = {};
+
+  // 直行模塊 & 圓形矮凳：矩形包圍盒即可
+  ['SP-17-1TRBS','SP-17-1TLBS','SP-17-1TSBS','SP-17-1TNBS',
+   'SP-17-2TRBS','SP-17-2TLBS','SP-17-2TSBS','SP-17-2TNBS',
+   'SP-17-1.5TRBS','SP-17-1.5TLBS','SP-17-RPS'].forEach(id => {
+    outlines[id] = null;
+  });
+
+  // 鏡像輔助函數（左右翻轉）
+  const mirror = pts => pts.map(([x, y]) => [1 - x, y]);
+
+  // 60° 右轉角：斜邊（曲線）以 12 段折線近似
+  // viewBox 613×414 (SBS) / 558×414 (NBS)
+  // 斜邊兩端點（正規化）：(0, cy) → (cx, 0)，其餘三邊為直線
+  function build60R(cx, cy, segs) {
+    const pts = [];
+    for (let i = 0; i <= segs; i++) {
+      const t = i / segs;
+      // 線性插值近似弧線
+      pts.push([cx * t, cy * (1 - t)]);
+    }
+    pts.push([1, 0]);
+    pts.push([1, 1]);
+    pts.push([0, 1]);
+    return pts;
+  }
+  // 60RSBS: viewBox 613×414，斜邊頂端約 (185/613, 0)≈(0.302,0)，底端 (0, 204/414)≈(0,0.493)
+  outlines['SP-17-60RSBS'] = build60R(0.302, 0.493, 12);
+  outlines['SP-17-60LSBS'] = mirror(build60R(0.302, 0.493, 12));
+  // 60RNBS: viewBox 558×414，斜邊頂端約 (184/558, 0)≈(0.330,0)，底端 (0, 204/414)≈(0,0.493)
+  outlines['SP-17-60RNBS'] = build60R(0.330, 0.493, 12);
+  outlines['SP-17-60LNBS'] = mirror(build60R(0.330, 0.493, 12));
+
+  // 45° 右轉角：斜邊為直線
+  // viewBox 492×414 (SBS & NBS)
+  // 斜邊從 (0, 0.324) 到 (0.596, 1)（從 SVG 路徑頂點萃取）
+  // 整體輪廓（順時針）：(0,0)→(1,0)→(1,1)→(0.596,1)→(0,0.324)→(0,0)
+  const build45R = () => [[0,0],[1,0],[1,1],[0.596,1],[0,0.324],[0,0]];
+  outlines['SP-17-45RSBS'] = build45R();
+  outlines['SP-17-45LSBS'] = mirror(build45R());
+  outlines['SP-17-45RNBS'] = build45R();
+  outlines['SP-17-45LNBS'] = mirror(build45R());
+
+  // 30° 右轉角：斜邊為直線
+  // viewBox 407×414 (SBS & NBS)
+  // 斜邊從 (0, 0.170) 到 (0.478, 1)
+  // 整體輪廓：(0,0)→(1,0)→(1,1)→(0.478,1)→(0,0.170)→(0,0)
+  const build30R = () => [[0,0],[1,0],[1,1],[0.478,1],[0,0.170],[0,0]];
+  outlines['SP-17-30RSBS'] = build30R();
+  outlines['SP-17-30LSBS'] = mirror(build30R());
+  outlines['SP-17-30RNBS'] = build30R();
+  outlines['SP-17-30LNBS'] = mirror(build30R());
+
+  return outlines;
+})();
+
+/** 取得模塊在世界坐標中的輪廓頂點（含位移與旋轉） */
+function getModuleWorldVertices(mod) {
+  const wPx = mod.width * SCALE;
+  const hPx = mod.height * SCALE;
+  const outline = MODULE_OUTLINE[mod.id];
+  const normPts = outline ? outline : [[0,0],[1,0],[1,1],[0,1]];
+
+  const cx = mod.x + wPx / 2;
+  const cy = mod.y + hPx / 2;
+  const rad = (mod.rotate * Math.PI) / 180;
+  const cos = Math.cos(rad), sin = Math.sin(rad);
+
+  return normPts.map(([nx, ny]) => {
+    const lx = nx * wPx - wPx / 2;
+    const ly = ny * hPx - hPx / 2;
+    return {
+      x: cx + lx * cos - ly * sin,
+      y: cy + lx * sin + ly * cos
+    };
+  });
+}
+
+/** 將頂點陣列轉為封閉線段陣列 */
+function vertsToSegments(verts) {
+  const segs = [];
+  const n = verts.length;
+  for (let i = 0; i < n; i++) {
+    const a = verts[i], b = verts[(i + 1) % n];
+    // 略過重複點（折線末端與首端相同時避免零長度線段）
+    if (Math.abs(a.x - b.x) > 0.001 || Math.abs(a.y - b.y) > 0.001) {
+      segs.push(a.x, a.y, b.x, b.y);
+    }
+  }
+  return segs; // 格式：[ax,ay,bx,by, ax,ay,bx,by, ...]
+}
+
+/** 找 seg1 各取樣點對 seg2 的最近 (dx,dy) */
+function seg2segSnap(a1x,a1y,b1x,b1y, a2x,a2y,b2x,b2y) {
+  const SAMPLES = 5;
+  let bestDistSq = Infinity, bdx = 0, bdy = 0;
+  for (let i = 0; i <= SAMPLES; i++) {
+    const t = i / SAMPLES;
+    const px = a1x + (b1x-a1x)*t, py = a1y + (b1y-a1y)*t;
+    const dx2 = b2x-a2x, dy2 = b2y-a2y, lenSq = dx2*dx2+dy2*dy2;
+    let ct = lenSq < 1e-9 ? 0 : Math.max(0,Math.min(1,((px-a2x)*dx2+(py-a2y)*dy2)/lenSq));
+    const cpx = a2x+ct*dx2, cpy = a2y+ct*dy2;
+    const ddx = cpx-px, ddy = cpy-py, distSq = ddx*ddx+ddy*ddy;
+    if (distSq < bestDistSq) { bestDistSq=distSq; bdx=ddx; bdy=ddy; }
+  }
+  return { dist: Math.sqrt(bestDistSq), dx: bdx, dy: bdy };
+}
+
+/**
+ * 主吸附函數：
+ * draggedMods = 被拖曳的模塊陣列（傳入才啟用多邊形吸附）
+ * 退回模式：傳統包圍盒（draggedMods 為空時）
+ */
+function getSnapDelta(tx, ty, tw, th, excludeUids, draggedMods) {
+  const statics = modules.filter(m => !excludeUids.has(m.uid));
+  if (statics.length === 0) return { dx: 0, dy: 0 };
+
+  // 取被拖曳模塊的線段
+  let dSegs = []; // [ax,ay,bx,by,...]
+  if (draggedMods && draggedMods.length > 0) {
+    draggedMods.forEach(mod => {
+      const v = getModuleWorldVertices(mod);
+      dSegs = dSegs.concat(vertsToSegments(v));
+    });
+  } else {
+    dSegs = [tx,ty,tx+tw,ty, tx+tw,ty,tx+tw,ty+th, tx+tw,ty+th,tx,ty+th, tx,ty+th,tx,ty];
+  }
+
+  let bestDist = SNAP_THRESHOLD + 0.001, bestDx = 0, bestDy = 0;
+
+  statics.forEach(o => {
+    const oV = getModuleWorldVertices(o);
+    const oSegs = vertsToSegments(oV);
+
+    for (let di = 0; di < dSegs.length; di += 4) {
+      for (let oi = 0; oi < oSegs.length; oi += 4) {
+        const r = seg2segSnap(
+          dSegs[di],dSegs[di+1],dSegs[di+2],dSegs[di+3],
+          oSegs[oi],oSegs[oi+1],oSegs[oi+2],oSegs[oi+3]
+        );
+        if (r.dist < bestDist) {
+          bestDist = r.dist;
+          bestDx = r.dx;
+          bestDy = r.dy;
+        }
+      }
+    }
+  });
+
+  return { dx: bestDx, dy: bestDy };
+}
+
+function initSelectData(type) {
+  const nativeSelect = document.getElementById(`${type}-select`);
+  const optionsList = document.getElementById(`${type}-options-list`);
+  const models = SOFA_MODELS[type];
+
+  nativeSelect.innerHTML = '';
+  optionsList.innerHTML = '';
+
+  models.forEach((model, index) => {
+    const opt = document.createElement('option');
+    opt.value = model.id;
+    opt.textContent = `${model.name} (${model.id})`;
+    nativeSelect.appendChild(opt);
+
+    const customOpt = document.createElement('div');
+    customOpt.className = `custom-option${index === 0 ? ' selected' : ''}`;
+    customOpt.setAttribute('data-id', model.id);
+    customOpt.onclick = (e) => {
+      e.stopPropagation();
+      selectCustomOption(type, model.id);
+    };
+
+    const iconDiv = document.createElement('div');
+    iconDiv.className = 'custom-option-icon';
+    
+    const imgEl = document.createElement('img');
+    imgEl.src = getModuleImageUrl(model.id);
+    iconDiv.appendChild(imgEl);
+
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'custom-option-name';
+    nameDiv.textContent = `${model.name} (${model.id})`;
+
+    customOpt.appendChild(iconDiv);
+    customOpt.appendChild(nameDiv);
+    optionsList.appendChild(customOpt);
+
+    if (index === 0) {
+      updateTriggerContent(type, model.id);
+    }
+  });
+}
+
+function toggleSelect(type) {
+  const target = document.getElementById(`${type}-custom-select`);
+  const isOpen = target.classList.contains('open');
+  closeAllSelects();
+  if (!isOpen) {
+    target.classList.add('open');
+  }
+}
+
+function closeAllSelects() {
+  document.querySelectorAll('.custom-select').forEach(el => el.classList.remove('open'));
+}
+
+function selectCustomOption(type, modelId) {
+  const nativeSelect = document.getElementById(`${type}-select`);
+  nativeSelect.value = modelId;
+
+  const optionsList = document.getElementById(`${type}-options-list`);
+  optionsList.querySelectorAll('.custom-option').forEach(opt => {
+    if (opt.getAttribute('data-id') === modelId) {
+      opt.classList.add('selected');
+    } else {
+      opt.classList.remove('selected');
+    }
+  });
+
+  updateTriggerContent(type, modelId);
+  closeAllSelects();
+}
+
+function updateTriggerContent(type, modelId) {
+  const models = SOFA_MODELS[type];
+  const model = models.find(m => m.id === modelId);
+  const triggerContent = document.getElementById(`${type}-trigger-content`);
+  if (!model) return;
+
+  triggerContent.innerHTML = `
+    <div class="trigger-icon">
+      <img src="${getModuleImageUrl(model.id)}">
+    </div>
+    <span style="font-size:12px; color:#1a1a1a;">${model.name}</span>
+  `;
+}
+
+function getSelectedModel(type) {
+  const nativeSelect = document.getElementById(`${type}-select`);
+  const id = nativeSelect.value;
+  return SOFA_MODELS[type].find(m => m.id === id);
+}
+
+// ==========================================
+// 3. 畫布核心控制
+// ==========================================
+function insertModule(type) {
+  const model = getSelectedModel(type);
+  if (!model) return;
+
+  const canvasEl = document.getElementById('canvas');
+  const cx = (canvasEl.clientWidth / 2 - panX) / canvasZoom;
+  const cy = (canvasEl.clientHeight / 2 - panY) / canvasZoom;
+
+  const wPx = model.width * SCALE;
+  const hPx = model.height * SCALE;
+
+  const uid = Date.now() + Math.floor(Math.random() * 1000);
+
+  // 僅當該型號的 SVG 圖塊中確實含有預設椅背色塊（#c0c0c0）時才帶入預設值，
+  // 否則（例如無椅背款式）保持「椅背顏色」欄位空白
+  const svgMarkup = CUSTOM_SVG[model.id] || "";
+  const hasBackColorBlock = svgMarkup.toLowerCase().includes(DEFAULT_BACK_COLOR);
+
+  const newModule = {
+    uid: uid,
+    id: model.id,
+    name: model.name,
+    width: model.width,
+    height: model.height,
+    spec: model.spec,
+    x: cx - wPx / 2,
+    y: cy - hPx / 2,
+    rotate: 0,
+    note: "",
+    seatColor: DEFAULT_SEAT_COLOR,
+    backColor: hasBackColorBlock ? DEFAULT_BACK_COLOR : "",
+    backLabel: "",
+    seatLabel: ""
+  };
+
+  modules.push(newModule);
+  renderModuleDOM(newModule);
+  renderTable();
+  selectModule(uid);
+  updateEmptyHint();
+  showToast(`已插入 ${model.id}`);
+}
+
+function renderModuleDOM(mod) {
+  const viewport = document.getElementById('canvas-viewport');
+  const div = document.createElement('div');
+  div.className = 'sofa-module';
+  div.id = `mod-${mod.uid}`;
+
+  div.style.width = `${mod.width * SCALE}px`;
+  div.style.height = `${mod.height * SCALE}px`;
+  div.style.left = `${mod.x}px`;
+  div.style.top = `${mod.y}px`;
+
+  const imgEl = document.createElement('img');
+  imgEl.src = getModuleImageUrl(mod.id, mod.seatColor, mod.backColor);
+  div.appendChild(imgEl);
+
+  div.style.transform = `rotate(${mod.rotate}deg)`;
+
+  div.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+    // Ctrl（Windows）或 ⌘ Command（Mac）+ 點擊：加選 / 減選
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      toggleModuleSelection(mod.uid);
+      return;
+    }
+    // 若點擊的模塊已在多選集合中，直接開始群組拖曳
+    if (selectedUids.size > 1 && selectedUids.has(mod.uid)) {
+      startDrag(e, mod);
+    } else {
+      selectModule(mod.uid);
+      startDrag(e, mod);
+    }
+  });
+
+  // 阻止 click 冒泡到 canvas，避免觸發 handleCanvasClick 清空選取
+  div.addEventListener('click', (e) => e.stopPropagation());
+
+  div.addEventListener('touchstart', (e) => {
+    e.stopPropagation();
+    if (multiSelectMode) {
+      // 多選模式：tap 加選/減選，不啟動拖曳
+      toggleModuleSelection(mod.uid);
+    } else if (selectedUids.size > 1 && selectedUids.has(mod.uid)) {
+      // 已在多選集合中：直接群組拖曳
+      startDrag(e.touches[0], mod);
+    } else {
+      selectModule(mod.uid);
+      startDrag(e.touches[0], mod);
+    }
+  }, { passive: true });
+
+  viewport.appendChild(div);
+}
+
+function updateModuleDOMPosition(mod) {
+  const div = document.getElementById(`mod-${mod.uid}`);
+  if (div) {
+    div.style.left = `${mod.x}px`;
+    div.style.top = `${mod.y}px`;
+    div.style.transform = `rotate(${mod.rotate}deg)`;
+  }
+}
+
+function selectModule(uid) {
+  // 清除舊單選
+  if (selectedUid !== null) {
+    const prevDiv = document.getElementById(`mod-${selectedUid}`);
+    if (prevDiv) prevDiv.classList.remove('selected');
+    const prevRow = document.getElementById(`row-${selectedUid}`);
+    if (prevRow) prevRow.style.background = '';
+  }
+  // 清除多選
+  clearMultiSelection();
+
+  selectedUid = uid;
+
+  if (selectedUid !== null) {
+    const currDiv = document.getElementById(`mod-${selectedUid}`);
+    if (currDiv) currDiv.classList.add('selected');
+    const currRow = document.getElementById(`row-${selectedUid}`);
+    if (currRow) currRow.style.background = '#e1f0fe';
+  }
+}
+
+// Ctrl / ⌘ + 點擊：加入或移出多選集合
+function toggleModuleSelection(uid) {
+  // 若目前是單選狀態，先將單選模塊納入多選集合
+  if (selectedUid !== null && selectedUids.size === 0) {
+    const prevDiv = document.getElementById(`mod-${selectedUid}`);
+    if (prevDiv) { prevDiv.classList.remove('selected'); prevDiv.classList.add('multi-selected'); }
+    const prevRow = document.getElementById(`row-${selectedUid}`);
+    if (prevRow) { prevRow.style.background = ''; prevRow.classList.add('multi-selected-row'); }
+    selectedUids.add(selectedUid);
+    selectedUid = null;
+  }
+
+  if (selectedUids.has(uid)) {
+    // 已在集合中 → 移除高亮，從集合刪除
+    const div = document.getElementById(`mod-${uid}`);
+    if (div) div.classList.remove('multi-selected');
+    const row = document.getElementById(`row-${uid}`);
+    if (row) row.classList.remove('multi-selected-row');
+    selectedUids.delete(uid);
+
+    // 若集合剩下 1 個，退回單選模式
+    if (selectedUids.size === 1) {
+      const lastUid = [...selectedUids][0];
+      selectedUids.clear();
+      // 直接設定單選，不呼叫 selectModule（避免它再次 clearMultiSelection）
+      selectedUid = lastUid;
+      const lastDiv = document.getElementById(`mod-${lastUid}`);
+      if (lastDiv) lastDiv.classList.add('selected');
+      const lastRow = document.getElementById(`row-${lastUid}`);
+      if (lastRow) lastRow.style.background = '#e1f0fe';
+    } else if (selectedUids.size === 0) {
+      // 集合清空，取消所有選取
+      selectedUid = null;
+    }
+  } else {
+    // 不在集合中 → 加入
+    selectedUids.add(uid);
+    const div = document.getElementById(`mod-${uid}`);
+    if (div) div.classList.add('multi-selected');
+    const row = document.getElementById(`row-${uid}`);
+    if (row) row.classList.add('multi-selected-row');
+  }
+}
+
+// ==========================================
+// 多選管理
+// ==========================================
+function clearMultiSelection() {
+  selectedUids.forEach(uid => {
+    const div = document.getElementById(`mod-${uid}`);
+    if (div) div.classList.remove('multi-selected');
+    const row = document.getElementById(`row-${uid}`);
+    if (row) row.classList.remove('multi-selected-row');
+  });
+  selectedUids.clear();
+}
+
+function applyMultiSelection(uids) {
+  // 先清除單選
+  if (selectedUid !== null) {
+    const prevDiv = document.getElementById(`mod-${selectedUid}`);
+    if (prevDiv) prevDiv.classList.remove('selected');
+    const prevRow = document.getElementById(`row-${selectedUid}`);
+    if (prevRow) prevRow.style.background = '';
+    selectedUid = null;
+  }
+  clearMultiSelection();
+
+  uids.forEach(uid => {
+    selectedUids.add(uid);
+    const div = document.getElementById(`mod-${uid}`);
+    if (div) div.classList.add('multi-selected');
+    const row = document.getElementById(`row-${uid}`);
+    if (row) row.classList.add('multi-selected-row');
+  });
+}
+
+// ==========================================
+// 框選引擎
+// ==========================================
+function initBoxSelect() {
+  const canvasEl = document.getElementById('canvas');
+  const selRect = document.getElementById('selection-rect');
+
+  canvasEl.addEventListener('mousedown', (e) => {
+    // 只有直接點到 canvas 背景（非模塊）才啟動框選
+    if (e.target !== canvasEl && e.target.id !== 'empty-hint' && e.target.id !== 'selection-rect' && e.target.id !== 'canvas-viewport') return;
+    // 中鍵拖曳或按住空白鍵時，交由畫布平移功能處理，框選不介入
+    if (e.button !== 0) return;
+
+    isBoxSelecting = true;
+    const rect = canvasEl.getBoundingClientRect();
+    // 框選起始點：視覺坐標（用於畫選框）
+    boxSelectStartX = e.clientX - rect.left;
+    boxSelectStartY = e.clientY - rect.top;
+
+    selRect.style.left   = boxSelectStartX + 'px';
+    selRect.style.top    = boxSelectStartY + 'px';
+    selRect.style.width  = '0px';
+    selRect.style.height = '0px';
+    selRect.style.display = 'block';
+
+    const onMove = (ev) => {
+      if (!isBoxSelecting) return;
+      const cx = ev.clientX - rect.left;
+      const cy = ev.clientY - rect.top;
+
+      // 選框繪製在視覺空間
+      const x = Math.min(cx, boxSelectStartX);
+      const y = Math.min(cy, boxSelectStartY);
+      const w = Math.abs(cx - boxSelectStartX);
+      const h = Math.abs(cy - boxSelectStartY);
+
+      selRect.style.left   = x + 'px';
+      selRect.style.top    = y + 'px';
+      selRect.style.width  = w + 'px';
+      selRect.style.height = h + 'px';
+    };
+
+    const onUp = (ev) => {
+      if (!isBoxSelecting) return;
+      isBoxSelecting = false;
+      selRect.style.display = 'none';
+
+      const cx = ev.clientX - rect.left;
+      const cy = ev.clientY - rect.top;
+
+      if (Math.abs(cx - boxSelectStartX) < 4 && Math.abs(cy - boxSelectStartY) < 4) {
+        // 單點空白處：清除所有選取（含多選）
+        clearMultiSelection();
+        selectModule(null);
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        skipNextCanvasClick = false;
+        return;
+      }
+
+      skipNextCanvasClick = true;
+
+      // 轉換為邏輯坐標（模塊的 x/y 為邏輯像素）後做交集判斷，需扣除目前畫布平移量
+      const sx = (Math.min(cx, boxSelectStartX) - panX) / canvasZoom;
+      const sy = (Math.min(cy, boxSelectStartY) - panY) / canvasZoom;
+      const ex = (Math.max(cx, boxSelectStartX) - panX) / canvasZoom;
+      const ey = (Math.max(cy, boxSelectStartY) - panY) / canvasZoom;
+
+      const matched = modules.filter(mod => {
+        const wPx = mod.width * SCALE;
+        const hPx = mod.height * SCALE;
+        const modCx = mod.x + wPx / 2;
+        const modCy = mod.y + hPx / 2;
+        return modCx >= sx && modCx <= ex && modCy >= sy && modCy <= ey;
+      });
+
+      if (matched.length === 1) {
+        selectModule(matched[0].uid);
+      } else if (matched.length > 1) {
+        applyMultiSelection(matched.map(m => m.uid));
+        showToast(`已選取 ${matched.length} 個模塊`);
+      } else {
+        selectModule(null);
+      }
+
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+
+  // ── 觸控：單指在畫布空白處拖曳 → 框選 ──
+  canvasEl.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const target = touch.target;
+    if (target !== canvasEl && target.id !== 'empty-hint' && target.id !== 'selection-rect' && target.id !== 'canvas-viewport') return;
+
+    isBoxSelecting = true;
+    const rect = canvasEl.getBoundingClientRect();
+    boxSelectStartX = touch.clientX - rect.left;
+    boxSelectStartY = touch.clientY - rect.top;
+
+    selRect.style.left   = boxSelectStartX + 'px';
+    selRect.style.top    = boxSelectStartY + 'px';
+    selRect.style.width  = '0px';
+    selRect.style.height = '0px';
+    selRect.style.display = 'block';
+
+    const onTouchMove = (ev) => {
+      if (!isBoxSelecting || ev.touches.length !== 1) return;
+      const t = ev.touches[0];
+      const cx = t.clientX - rect.left;
+      const cy = t.clientY - rect.top;
+      selRect.style.left   = Math.min(cx, boxSelectStartX) + 'px';
+      selRect.style.top    = Math.min(cy, boxSelectStartY) + 'px';
+      selRect.style.width  = Math.abs(cx - boxSelectStartX) + 'px';
+      selRect.style.height = Math.abs(cy - boxSelectStartY) + 'px';
+    };
+
+    const onTouchEnd = (ev) => {
+      if (!isBoxSelecting) return;
+      isBoxSelecting = false;
+      selRect.style.display = 'none';
+
+      const lastTouch = ev.changedTouches[0];
+      const cx = lastTouch.clientX - rect.left;
+      const cy = lastTouch.clientY - rect.top;
+
+      canvasEl.removeEventListener('touchmove', onTouchMove);
+      canvasEl.removeEventListener('touchend', onTouchEnd);
+
+      if (Math.abs(cx - boxSelectStartX) < 8 && Math.abs(cy - boxSelectStartY) < 8) {
+        clearMultiSelection();
+        selectModule(null);
+        skipNextCanvasClick = false;
+        return;
+      }
+
+      skipNextCanvasClick = true;
+      const sx = (Math.min(cx, boxSelectStartX) - panX) / canvasZoom;
+      const sy = (Math.min(cy, boxSelectStartY) - panY) / canvasZoom;
+      const ex = (Math.max(cx, boxSelectStartX) - panX) / canvasZoom;
+      const ey = (Math.max(cy, boxSelectStartY) - panY) / canvasZoom;
+
+      const matched = modules.filter(mod => {
+        const modCx = mod.x + (mod.width * SCALE) / 2;
+        const modCy = mod.y + (mod.height * SCALE) / 2;
+        return modCx >= sx && modCx <= ex && modCy >= sy && modCy <= ey;
+      });
+
+      if (matched.length === 1) {
+        selectModule(matched[0].uid);
+      } else if (matched.length > 1) {
+        applyMultiSelection(matched.map(m => m.uid));
+        showToast(`已選取 ${matched.length} 個模塊`);
+      } else {
+        selectModule(null);
+      }
+    };
+
+    canvasEl.addEventListener('touchmove', onTouchMove, { passive: true });
+    canvasEl.addEventListener('touchend', onTouchEnd, { passive: true });
+  }, { passive: true });
+}
+
+function handleCanvasClick(e) {
+  if (skipNextCanvasClick) {
+    skipNextCanvasClick = false;
+    return;
+  }
+  // 點擊畫布空白處：取消所有選取（含多選）
+  clearMultiSelection();
+  selectModule(null);
+}
+
+// ==========================================
+// 4. 拖拽引擎 (支援滑鼠與觸控、多選群組拖拽)
+// ==========================================
+function startDrag(e, mod) {
+  // 判斷是否為多選群組拖拽
+  const isGroupDrag = selectedUids.size > 1 && selectedUids.has(mod.uid);
+
+  isDragging = true;
+  let hasDragged = false;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  moduleStartX = mod.x;
+  moduleStartY = mod.y;
+
+  // 記錄群組中每個模塊的起始位置
+  let groupStartPositions = [];
+  if (isGroupDrag) {
+    groupStartPositions = [...selectedUids].map(uid => {
+      const m = modules.find(x => x.uid === uid);
+      return m ? { uid, x: m.x, y: m.y } : null;
+    }).filter(Boolean);
+  }
+
+  const moveHandler = (evt) => {
+    if (!isDragging) return;
+    // 觸控拖曳時阻止頁面捲動
+    if (evt.cancelable && evt.touches) evt.preventDefault();
+    const clientX = evt.clientX !== undefined ? evt.clientX : (evt.touches && evt.touches[0].clientX);
+    const clientY = evt.clientY !== undefined ? evt.clientY : (evt.touches && evt.touches[0].clientY);
+
+    if (clientX === undefined || clientY === undefined) return;
+
+    // 除以縮放比例，轉為邏輯像素偏移
+    const dx = (clientX - dragStartX) / canvasZoom;
+    const dy = (clientY - dragStartY) / canvasZoom;
+
+    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+      hasDragged = true;
+    }
+
+    const canvasEl = document.getElementById('canvas');
+    // 邏輯邊界（模塊坐標空間），需依目前畫布平移量換算出「目前可視範圍」
+    const viewMinX = -panX / canvasZoom;
+    const viewMinY = -panY / canvasZoom;
+    const viewMaxX = viewMinX + canvasEl.clientWidth / canvasZoom;
+    const viewMaxY = viewMinY + canvasEl.clientHeight / canvasZoom;
+
+    if (isGroupDrag) {
+      // 群組拖拽：先算出各模塊暫定位置，再對整個群組的邊界框做吸附
+      const tentative = groupStartPositions.map(({ uid, x: sx, y: sy }) => {
+        const m = modules.find(mo => mo.uid === uid);
+        if (!m) return null;
+        const wPx = m.width * SCALE;
+        const hPx = m.height * SCALE;
+        return { m, x: Math.min(Math.max(viewMinX, sx + dx), viewMaxX - wPx), y: Math.min(Math.max(viewMinY, sy + dy), viewMaxY - hPx) };
+      }).filter(Boolean);
+
+      // 計算群組邊界框
+      let gMinX = Infinity, gMinY = Infinity, gMaxX = -Infinity, gMaxY = -Infinity;
+      tentative.forEach(({ m, x, y }) => {
+        gMinX = Math.min(gMinX, x);
+        gMinY = Math.min(gMinY, y);
+        gMaxX = Math.max(gMaxX, x + m.width * SCALE);
+        gMaxY = Math.max(gMaxY, y + m.height * SCALE);
+      });
+      // 暫時套用位置，讓 getModuleWorldVertices 能讀取到拖曳後的座標
+      const savedPositions = tentative.map(({ m }) => ({ m, ox: m.x, oy: m.y }));
+      tentative.forEach(({ m, x, y }) => { m.x = x; m.y = y; });
+      const draggedModsList = tentative.map(t => t.m);
+      const snap = getSnapDelta(gMinX, gMinY, gMaxX - gMinX, gMaxY - gMinY, selectedUids, draggedModsList);
+      // 還原（後面會加上 snap.dx/dy 再正式設定）
+      savedPositions.forEach(({ m, ox, oy }) => { m.x = ox; m.y = oy; });
+
+      tentative.forEach(({ m, x, y }) => {
+        m.x = x + snap.dx;
+        m.y = y + snap.dy;
+        updateModuleDOMPosition(m);
+      });
+    } else {
+      // 單選拖拽
+      const wPx = mod.width * SCALE;
+      const hPx = mod.height * SCALE;
+      let nx = Math.min(Math.max(viewMinX, moduleStartX + dx), viewMaxX - wPx);
+      let ny = Math.min(Math.max(viewMinY, moduleStartY + dy), viewMaxY - hPx);
+
+      // 先暫時更新模塊位置，讓 getModuleWorldVertices 能讀取到最新座標
+      const origX = mod.x, origY = mod.y;
+      mod.x = nx; mod.y = ny;
+      const snap = getSnapDelta(nx, ny, wPx, hPx, new Set([mod.uid]), [mod]);
+      mod.x = origX; mod.y = origY; // 還原，讓後面統一設定
+
+      nx += snap.dx;
+      ny += snap.dy;
+
+      mod.x = nx;
+      mod.y = ny;
+      updateModuleDOMPosition(mod);
+    }
+  };
+
+  const upHandler = () => {
+    isDragging = false;
+    skipNextCanvasClick = true;
+    document.removeEventListener("mousemove", moveHandler);
+    document.removeEventListener("mouseup", upHandler);
+    document.removeEventListener("touchmove", moveHandler);
+    document.removeEventListener("touchend", upHandler);
+  };
+
+  document.addEventListener('mousemove', moveHandler);
+  document.addEventListener('mouseup', upHandler);
+  // passive: false 確保 iOS Safari 不會搶奪觸控使頁面捲動
+  document.addEventListener('touchmove', moveHandler, { passive: false });
+  document.addEventListener('touchend', upHandler);
+}
+
+// ==========================================
+// 5. 元件控制指令 (旋轉/刪除/清空)
+// ==========================================
+function rotateSelected(angle) {
+  if (selectedUids.size > 1) {
+    // 將所選模塊視為一個群組，繞群組中心旋轉
+    const selectedMods = Array.from(selectedUids)
+      .map(uid => modules.find(m => m.uid === uid))
+      .filter(Boolean);
+
+    // 以各模塊中心點的外接框中心作為群組旋轉中心
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    selectedMods.forEach(mod => {
+      const cx = mod.x + (mod.width * SCALE) / 2;
+      const cy = mod.y + (mod.height * SCALE) / 2;
+      minX = Math.min(minX, cx);
+      maxX = Math.max(maxX, cx);
+      minY = Math.min(minY, cy);
+      maxY = Math.max(maxY, cy);
+    });
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+
+    const rad = (angle * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+
+    selectedMods.forEach(mod => {
+      const cx = mod.x + (mod.width * SCALE) / 2;
+      const cy = mod.y + (mod.height * SCALE) / 2;
+      const dx = cx - centerX;
+      const dy = cy - centerY;
+      const newCx = centerX + dx * cos - dy * sin;
+      const newCy = centerY + dx * sin + dy * cos;
+      mod.x = newCx - (mod.width * SCALE) / 2;
+      mod.y = newCy - (mod.height * SCALE) / 2;
+      mod.rotate = (mod.rotate + angle + 360) % 360;
+      updateModuleDOMPosition(mod);
+    });
+    renderTable();
+    return;
+  }
+  if (selectedUid === null) {
+    showToast("請先點擊選取畫布中的沙發模塊");
+    return;
+  }
+  const mod = modules.find(m => m.uid === selectedUid);
+  if (mod) {
+    mod.rotate = (mod.rotate + angle) % 360;
+    updateModuleDOMPosition(mod);
+  }
+}
+
+function deleteSelected() {
+  // 多選刪除
+  if (selectedUids.size > 1) {
+    const count = selectedUids.size;
+    selectedUids.forEach(uid => {
+      const div = document.getElementById(`mod-${uid}`);
+      if (div) div.remove();
+    });
+    modules = modules.filter(m => !selectedUids.has(m.uid));
+    clearMultiSelection();
+    renderTable();
+    updateEmptyHint();
+    showToast(`已刪除 ${count} 個模塊`);
+    return;
+  }
+
+  if (selectedUid === null) {
+    showToast("請先選取欲刪除的模塊");
+    return;
+  }
+  const div = document.getElementById(`mod-${selectedUid}`);
+  if (div) div.remove();
+
+  modules = modules.filter(m => m.uid !== selectedUid);
+  selectedUid = null;
+
+  renderTable();
+  updateEmptyHint();
+  showToast("已刪除該模塊");
+}
+
+function clearCanvas() {
+  if (modules.length === 0) return;
+  if (confirm("確定要清空畫布上的所有配置嗎？")) {
+    modules.forEach(mod => {
+      const div = document.getElementById(`mod-${mod.uid}`);
+      if (div) div.remove();
+    });
+    modules = [];
+    selectedUid = null;
+    clearMultiSelection();
+    renderTable();
+    updateEmptyHint();
+    showToast("已清空配置畫布");
+  }
+}
+
+function updateEmptyHint() {
+  const hint = document.getElementById('empty-hint');
+  hint.style.display = modules.length === 0 ? 'flex' : 'none';
+}
+
+// ==========================================
+// 6. 配置清單表格與 CSV 匯出
+// ==========================================
+// ==========================================
+// 5b. 配置清單：椅背 / 坐墊 顏色選擇器
+// ==========================================
+function createColorCell(mod, key) {
+  const td = document.createElement('td');
+  td.className = 'color-cell';
+
+  // flex 容器
+  const inner = document.createElement('div');
+  inner.style.display = 'flex';
+  inner.style.alignItems = 'center';
+  inner.style.gap = '5px';
+  td.appendChild(inner);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'color-select';
+  wrap.id = `colorSelect-${key}-${mod.uid}`;
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'color-swatch-btn';
+  btn.id = `colorBtn-${key}-${mod.uid}`;
+  btn.style.background = mod[key];
+  const isNoColor = !mod[key];
+  if (isNoColor) {
+    btn.classList.add('no-color');
+    btn.disabled = true;
+    btn.title = '此型號無此色塊，不可選色';
+  } else {
+    btn.title = key === 'backColor' ? '椅背顏色' : '坐墊顏色';
+  }
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    if (isNoColor) return;
+    toggleColorPopup(mod.uid, key);
+  };
+
+  const popup = document.createElement('div');
+  popup.className = 'color-popup';
+  popup.id = `colorPopup-${key}-${mod.uid}`;
+
+  COLOR_PALETTE.forEach(color => {
+    const opt = document.createElement('button');
+    opt.type = 'button';
+    opt.className = `color-swatch-option${mod[key].toLowerCase() === color.toLowerCase() ? ' selected' : ''}`;
+    opt.style.background = color;
+    opt.title = color;
+    opt.onclick = (e) => {
+      e.stopPropagation();
+      setModuleColor(mod.uid, key, color);
+    };
+    popup.appendChild(opt);
+  });
+
+  wrap.appendChild(btn);
+  wrap.appendChild(popup);
+  inner.appendChild(wrap);
+
+  // 布號填入框（椅背無色時不提供）
+  if (!isNoColor) {
+    const labelKey = key === 'backColor' ? 'backLabel' : 'seatLabel';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'fabric-label-input';
+    input.placeholder = '請填入布號';
+    input.value = mod[labelKey] || '';
+    input.onclick = (e) => e.stopPropagation();
+    input.oninput = (e) => {
+      mod[labelKey] = e.target.value;
+    };
+    inner.appendChild(input);
+  }
+
+  return td;
+}
+
+function toggleColorPopup(uid, key) {
+  const target = document.getElementById(`colorSelect-${key}-${uid}`);
+  if (!target) return;
+  const isOpen = target.classList.contains('open');
+  closeAllColorPopups();
+  if (!isOpen) {
+    target.classList.add('open');
+  }
+}
+
+function closeAllColorPopups() {
+  document.querySelectorAll('.color-select').forEach(el => el.classList.remove('open'));
+}
+
+function setModuleColor(uid, key, color) {
+  const mod = modules.find(m => m.uid === uid);
+  if (!mod) return;
+
+  mod[key] = color;
+
+  // 更新畫布上的模塊圖像
+  const div = document.getElementById(`mod-${uid}`);
+  if (div) {
+    const img = div.querySelector('img');
+    if (img) img.src = getModuleImageUrl(mod.id, mod.seatColor, mod.backColor);
+  }
+
+  // 更新清單上的色塊按鈕與選取狀態，不需重繪整個表格
+  const btn = document.getElementById(`colorBtn-${key}-${uid}`);
+  if (btn) {
+    btn.style.background = color;
+    btn.classList.remove('no-color');
+  }
+
+  const popup = document.getElementById(`colorPopup-${key}-${uid}`);
+  if (popup) {
+    popup.querySelectorAll('.color-swatch-option').forEach(opt => {
+      opt.classList.toggle('selected', opt.title.toLowerCase() === color.toLowerCase());
+    });
+  }
+
+  closeAllColorPopups();
+}
+
+function buildAggregatedRows() {
+  // 依「型號(id) + 註記(note)」完全相同進行彙整，數量加總
+  const groups = new Map();
+  modules.forEach(mod => {
+    const key = `${mod.id}\u0001${mod.backLabel}\u0001${mod.seatLabel}\u0001${mod.note}`;
+    if (!groups.has(key)) {
+      groups.set(key, {
+        name: mod.name,
+        id: mod.id,
+        spec: mod.spec || `${mod.width} × ${mod.height}`,
+        backColor: mod.backColor,
+        seatColor: mod.seatColor,
+        backLabel: mod.backLabel,
+        seatLabel: mod.seatLabel,
+        note: mod.note,
+        qty: 0,
+        uids: []
+      });
+    }
+    const g = groups.get(key);
+    g.qty += 1;
+    g.uids.push(mod.uid);
+  });
+  return Array.from(groups.values());
+}
+
+function toggleAggregate() {
+  if (modules.length === 0 && !isAggregated) {
+    showToast("清單目前沒有任何項目");
+    return;
+  }
+  isAggregated = !isAggregated;
+  const btn = document.getElementById('aggregateBtn');
+  if (btn) {
+    btn.textContent = isAggregated ? '📋 顯示明細' : '🧮 彙整型號';
+  }
+  renderTable();
+  showToast(isAggregated ? "已彙整相同型號與註記項目" : "已還原明細清單");
+}
+
+function renderTable() {
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = '';
+
+  if (isAggregated) {
+    const rows = buildAggregatedRows();
+
+    rows.forEach((g, idx) => {
+      const tr = document.createElement('tr');
+      tr.id = `agg-row-${idx}`;
+
+      const tdName = document.createElement('td');
+      tdName.textContent = g.name;
+
+      const tdId = document.createElement('td');
+      tdId.style.fontWeight = 'bold';
+      tdId.textContent = g.id;
+
+      const tdSpec = document.createElement('td');
+      tdSpec.textContent = g.spec;
+
+      const tdQty = document.createElement('td');
+      tdQty.style.textAlign = 'center';
+      tdQty.style.fontWeight = 'bold';
+      tdQty.textContent = g.qty;
+
+      const tdBackColor = document.createElement('td');
+      tdBackColor.className = 'color-cell';
+      const backInner = document.createElement('div');
+      backInner.style.display = 'flex';
+      backInner.style.alignItems = 'center';
+      backInner.style.gap = '5px';
+      tdBackColor.appendChild(backInner);
+      const backDot = document.createElement('div');
+      backDot.className = 'color-swatch-btn';
+      backDot.style.background = g.backColor;
+      if (!g.backColor) { backDot.classList.add('no-color'); }
+      backDot.style.pointerEvents = 'none';
+      backDot.title = '椅背顏色';
+      backInner.appendChild(backDot);
+      if (g.backColor && g.backLabel) {
+        const lbl = document.createElement('span');
+        lbl.className = 'fabric-label-text';
+        lbl.textContent = g.backLabel;
+        backInner.appendChild(lbl);
+      }
+
+      const tdSeatColor = document.createElement('td');
+      tdSeatColor.className = 'color-cell';
+      const seatInner = document.createElement('div');
+      seatInner.style.display = 'flex';
+      seatInner.style.alignItems = 'center';
+      seatInner.style.gap = '5px';
+      tdSeatColor.appendChild(seatInner);
+      const seatDot = document.createElement('div');
+      seatDot.className = 'color-swatch-btn';
+      seatDot.style.background = g.seatColor;
+      seatDot.style.pointerEvents = 'none';
+      seatDot.title = '坐墊顏色';
+      seatInner.appendChild(seatDot);
+      if (g.seatLabel) {
+        const lbl = document.createElement('span');
+        lbl.className = 'fabric-label-text';
+        lbl.textContent = g.seatLabel;
+        seatInner.appendChild(lbl);
+      }
+
+      const tdNote = document.createElement('td');
+      tdNote.className = 'note-cell';
+      tdNote.textContent = g.note;
+
+      tr.appendChild(tdName);
+      tr.appendChild(tdId);
+      tr.appendChild(tdSpec);
+      tr.appendChild(tdQty);
+      tr.appendChild(tdBackColor);
+      tr.appendChild(tdSeatColor);
+      tr.appendChild(tdNote);
+      tbody.appendChild(tr);
+    });
+    return;
+  }
+
+  modules.forEach(mod => {
+    const tr = document.createElement('tr');
+    tr.id = `row-${mod.uid}`;
+    tr.onclick = (e) => {
+      e.stopPropagation();
+      selectModule(mod.uid);
+    };
+
+    if (mod.uid === selectedUid) {
+      tr.style.background = '#e1f0fe';
+    }
+    if (selectedUids.has(mod.uid)) {
+      tr.classList.add('multi-selected-row');
+    }
+
+    const tdName = document.createElement('td');
+    tdName.textContent = mod.name;
+
+    const tdId = document.createElement('td');
+    tdId.style.fontWeight = 'bold';
+    tdId.textContent = mod.id;
+
+    const tdSpec = document.createElement('td');
+    tdSpec.textContent = mod.spec || `${mod.width} × ${mod.height}`;
+
+    const tdQty = document.createElement('td');
+    tdQty.style.textAlign = 'center';
+    tdQty.textContent = '1';
+
+    const tdBackColor = createColorCell(mod, 'backColor');
+    const tdSeatColor = createColorCell(mod, 'seatColor');
+
+    const tdNote = document.createElement('td');
+    tdNote.className = 'note-cell';
+    const textarea = document.createElement('textarea');
+    textarea.value = mod.note;
+    textarea.placeholder = "點擊輸入備註...";
+    textarea.onclick = (e) => e.stopPropagation();
+    textarea.oninput = (e) => {
+      mod.note = e.target.value;
+    };
+    tdNote.appendChild(textarea);
+
+    tr.appendChild(tdName);
+    tr.appendChild(tdId);
+    tr.appendChild(tdSpec);
+    tr.appendChild(tdQty);
+    tr.appendChild(tdBackColor);
+    tr.appendChild(tdSeatColor);
+    tr.appendChild(tdNote);
+    tbody.appendChild(tr);
+  });
+}
+
+// ==========================================
+// 儲存 / 載入專案
+// ==========================================
+function saveProject() {
+  if (modules.length === 0) {
+    showToast("畫布空白，無可儲存的內容");
+    return;
+  }
+
+  const projectData = {
+    version: 1,
+    savedAt: new Date().toISOString(),
+    modules: modules.map(mod => ({
+      uid:        mod.uid,
+      id:         mod.id,
+      name:       mod.name,
+      width:      mod.width,
+      height:     mod.height,
+      spec:       mod.spec,
+      x:          mod.x,
+      y:          mod.y,
+      rotate:     mod.rotate,
+      seatColor:  mod.seatColor,
+      backColor:  mod.backColor,
+      seatLabel:  mod.seatLabel,
+      backLabel:  mod.backLabel,
+      note:       mod.note
+    }))
+  };
+
+  const json = JSON.stringify(projectData, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const rawName = prompt("請輸入專案名稱：");
+  if (rawName === null) return; // 按取消則中止
+  const projectName = rawName.trim().replace(/[\\/:*?"<>|]/g, '_') || 'Untitled';
+
+  const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `AGORA_${projectName}_${ts}.agora`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast("專案已儲存");
+}
+
+function loadProject(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // 重置 input，讓同一個檔案也能再次觸發
+  event.target.value = '';
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    let data;
+    try {
+      data = JSON.parse(e.target.result);
+    } catch {
+      alert("檔案格式錯誤，請選擇有效的 .agora 專案檔。");
+      return;
+    }
+
+    if (!data.version || !Array.isArray(data.modules)) {
+      alert("檔案格式不符，無法載入。");
+      return;
+    }
+
+    const proceed = modules.length === 0 ||
+      confirm("載入新專案將覆蓋目前畫布上的所有配置，確定繼續？");
+    if (!proceed) return;
+
+    // 清空現有畫布
+    modules.forEach(mod => {
+      const div = document.getElementById(`mod-${mod.uid}`);
+      if (div) div.remove();
+    });
+    modules = [];
+    selectedUid = null;
+    clearMultiSelection();
+
+    // 載入模塊
+    data.modules.forEach(saved => {
+      // 以 uid 為準保留原始識別碼（避免拖曳衝突）
+      const mod = {
+        uid:       saved.uid,
+        id:        saved.id,
+        name:      saved.name,
+        width:     saved.width,
+        height:    saved.height,
+        spec:      saved.spec || '',
+        x:         saved.x,
+        y:         saved.y,
+        rotate:    saved.rotate || 0,
+        seatColor: saved.seatColor || DEFAULT_SEAT_COLOR,
+        backColor: saved.backColor ?? DEFAULT_BACK_COLOR,
+        seatLabel: saved.seatLabel || '',
+        backLabel: saved.backLabel || '',
+        note:      saved.note || ''
+      };
+      modules.push(mod);
+      renderModuleDOM(mod);
+    });
+
+    renderTable();
+    updateEmptyHint();
+    showToast(`已載入專案（${modules.length} 個模塊）`);
+  };
+  reader.readAsText(file);
+}
+
+function exportCSV() {
+  if (modules.length === 0) {
+    showToast("清單目前沒有任何項目");
+    return;
+  }
+
+  let csvContent = "\uFEFF";
+  csvContent += "模塊名稱,型號,規格(mm),數量,椅背布號,坐墊布號,註記\n";
+
+  const escCSV = (s) => `"${(s || '').replace(/"/g, '""')}"`;
+
+  if (isAggregated) {
+    const rows = buildAggregatedRows();
+    rows.forEach(g => {
+      const backLbl  = g.backColor  ? (g.backLabel  || '') : '';
+      const seatLbl  = g.seatLabel  || '';
+      csvContent += `${escCSV(g.name)},${escCSV(g.id)},${escCSV(g.spec)},${escCSV(String(g.qty))},${escCSV(backLbl)},${escCSV(seatLbl)},${escCSV(g.note)}\n`;
+    });
+  } else {
+    modules.forEach(mod => {
+      const backLbl  = mod.backColor ? (mod.backLabel  || '') : '';
+      const seatLbl  = mod.seatLabel || '';
+      csvContent += `${escCSV(mod.name)},${escCSV(mod.id)},${escCSV(mod.spec || `${mod.width}*${mod.height}`)},${escCSV('1')},${escCSV(backLbl)},${escCSV(seatLbl)},${escCSV(mod.note)}\n`;
+    });
+  }
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", `AGORA_Sofa_Layout_${Date.now()}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast("CSV 清單匯出成功");
+}
+
+// ==========================================
+// 7. 精確不失真：原生 2D Canvas 配置擷圖邏輯
+// ==========================================
+function captureCanvas() {
+  if (modules.length === 0) {
+    showToast("畫布空白，無法截圖");
+    return;
+  }
+
+  showToast("正在生成高解析度平面圖...");
+
+  const PADDING = 200; // 向外擴展 200 邏輯像素
+  const DPR = 2;       // 2 倍解析度輸出
+
+  // 1. 計算所有模塊旋轉後的實際邊界框
+  //    對每個模塊取 4 個角點做旋轉，求整體最大外框
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+  modules.forEach(mod => {
+    const wPx = mod.width * SCALE;
+    const hPx = mod.height * SCALE;
+    const cx = mod.x + wPx / 2;
+    const cy = mod.y + hPx / 2;
+    const rad = (mod.rotate * Math.PI) / 180;
+    const cos = Math.cos(rad), sin = Math.sin(rad);
+
+    // 4 個角點（相對中心）
+    [[-wPx/2, -hPx/2], [wPx/2, -hPx/2], [wPx/2, hPx/2], [-wPx/2, hPx/2]].forEach(([lx, ly]) => {
+      const wx = cx + lx * cos - ly * sin;
+      const wy = cy + lx * sin + ly * cos;
+      if (wx < minX) minX = wx;
+      if (wx > maxX) maxX = wx;
+      if (wy < minY) minY = wy;
+      if (wy > maxY) maxY = wy;
+    });
+  });
+
+  // 2. 加上 padding，得到擷圖範圍（邏輯像素）
+  const cropX = minX - PADDING;
+  const cropY = minY - PADDING;
+  const cropW = (maxX - minX) + PADDING * 2;
+  const cropH = (maxY - minY) + PADDING * 2;
+
+  // 3. 建立高解析度 Canvas
+  const exportCanvas = document.createElement('canvas');
+  exportCanvas.width  = Math.ceil(cropW * DPR);
+  exportCanvas.height = Math.ceil(cropH * DPR);
+  const ctx = exportCanvas.getContext('2d');
+  ctx.scale(DPR, DPR);
+
+  // 4. 填滿背景色
+  ctx.fillStyle = '#fcfcfc';
+  ctx.fillRect(0, 0, cropW, cropH);
+
+  // 5. 繪製網格（對齊世界座標網格，平移至擷圖原點）
+  const step1000 = 100;
+  const step200  = 20;
+
+  // 計算網格起始點（對齊世界座標的 20px 格線）
+  const gridStartX = Math.floor(cropX / step200) * step200;
+  const gridStartY = Math.floor(cropY / step200) * step200;
+
+  ctx.fillStyle = '#ccc';
+  for (let wx = gridStartX; wx <= cropX + cropW; wx += step200) {
+    for (let wy = gridStartY; wy <= cropY + cropH; wy += step200) {
+      ctx.beginPath();
+      ctx.arc(wx - cropX, wy - cropY, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  const gridStart1000X = Math.floor(cropX / step1000) * step1000;
+  const gridStart1000Y = Math.floor(cropY / step1000) * step1000;
+
+  ctx.fillStyle = '#5d5d5d';
+  for (let wx = gridStart1000X; wx <= cropX + cropW; wx += step1000) {
+    for (let wy = gridStart1000Y; wy <= cropY + cropH; wy += step1000) {
+      ctx.beginPath();
+      ctx.arc(wx - cropX, wy - cropY, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // 6. 依序繪製所有模塊（座標平移至擷圖原點）
+  let loadedImagesCount = 0;
+
+  modules.forEach(mod => {
+    const img = new Image();
+    img.src = getModuleImageUrl(mod.id, mod.seatColor, mod.backColor);
+
+    img.onload = () => {
+      ctx.save();
+
+      const wPx = mod.width * SCALE;
+      const hPx = mod.height * SCALE;
+      // 模塊中心點平移至擷圖座標系
+      const centerX = (mod.x + wPx / 2) - cropX;
+      const centerY = (mod.y + hPx / 2) - cropY;
+
+      ctx.translate(centerX, centerY);
+      ctx.rotate((mod.rotate * Math.PI) / 180);
+      ctx.drawImage(img, -wPx / 2, -hPx / 2, wPx, hPx);
+
+      ctx.restore();
+
+      loadedImagesCount++;
+      if (loadedImagesCount === modules.length) {
+        finalizeDownload();
+      }
+    };
+
+    img.onerror = () => {
+      loadedImagesCount++;
+      if (loadedImagesCount === modules.length) {
+        finalizeDownload();
+      }
+    };
+  });
+
+  function finalizeDownload() {
+    const link = document.createElement('a');
+    link.download = `AGORA_Sofa_Design_${Date.now()}.png`;
+    link.href = exportCanvas.toDataURL('image/png');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    showToast("平面圖下載完成");
+  }
+}
+// ==========================================
+// 多選模式切換（iPad 專用）
+// ==========================================
+function toggleMultiSelectMode() {
+  multiSelectMode = !multiSelectMode;
+  const btn = document.getElementById('multiselect-mode-btn');
+  if (multiSelectMode) {
+    btn.textContent = '☑ 多選模式：開啟';
+    btn.classList.add('multiselect-active');
+    showToast('多選模式已開啟，點擊模塊可累積加選');
+  } else {
+    btn.textContent = '☑ 多選模式：關閉';
+    btn.classList.remove('multiselect-active');
+    clearMultiSelection();
+    selectedUid = null;
+    showToast('多選模式已關閉');
+  }
+}
+
+// ==========================================
+// 8. 輔助工具 (吐司訊息通知)
+// ==========================================
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, 2500);
+}
+</script>
+
+</body>
+</html>
