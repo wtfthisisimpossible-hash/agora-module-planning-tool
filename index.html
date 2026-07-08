@@ -216,12 +216,13 @@ body { font-family: "Microsoft JhengHei", "PingFang TC", sans-serif; font-size: 
 .list-header span { font-size: 12px; font-weight: bold; color: #444; }
 
 table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
-col.col-name  { width: 17%; }
-col.col-id    { width: 15%; }
-col.col-spec  { width: 14%; }
-col.col-qty   { width: 6%; }
-col.col-color { width: 14%; }
-col.col-note  { width: 21%; }
+col.col-name   { width: 15%; }
+col.col-id     { width: 14%; }
+col.col-spec   { width: 12%; }
+col.col-qty    { width: 6%; }
+col.col-color  { width: 12%; }
+col.col-socket { width: 8%; }
+col.col-note   { width: 18%; }
 
 th {
   background: #eeebe6;
@@ -320,6 +321,30 @@ td:not(:last-child), th:not(:last-child) { border-right: 1px solid #ddd; }
   color: #1a1a1a;
 }
 .fabric-label-input::placeholder { color: #aaa; font-size: 10px; }
+/* 加購插座組數量輸入框 */
+.socket-qty-input {
+  width: 52px;
+  padding: 3px 5px;
+  border: 1px solid #bbb;
+  border-radius: 3px;
+  background: #fff;
+  color: #1a1a1a;
+  font-size: 12px;
+  font-family: inherit;
+  text-align: center;
+}
+.socket-qty-input:focus {
+  outline: none;
+  border-color: #FFCE1B;
+  box-shadow: 0 0 0 2px #fff3c4;
+}
+.socket-qty-input:disabled {
+  background: #f0f0f0;
+  color: #aaa;
+  cursor: not-allowed;
+  border-color: #ddd;
+}
+
 /* 彙整模式布號純文字顯示 */
 .fabric-label-text {
   font-size: 11px;
@@ -357,6 +382,12 @@ td:not(:last-child), th:not(:last-child) { border-right: 1px solid #ddd; }
   pointer-events: none;
   box-shadow: 0 0 0 1px #fff, 0 4px 10px rgba(26,111,196,0.3);
   z-index: 10;
+}
+
+/* 加購插座組邊框高亮（黃色） */
+.sofa-module.socket-highlight {
+  outline: 2.5px solid #FFCE1B;
+  outline-offset: 1px;
 }
 
 /* 框選矩形樣式 */
@@ -542,6 +573,7 @@ tr.multi-selected-row td {
           <col class="col-qty">
           <col class="col-color">
           <col class="col-color">
+          <col class="col-socket">
           <col class="col-note">
         </colgroup>
         <thead>
@@ -552,6 +584,7 @@ tr.multi-selected-row td {
             <th>數量</th>
             <th>椅背顏色</th>
             <th>坐墊顏色</th>
+            <th>加購插座組</th>
             <th>註記</th>
           </tr>
         </thead>
@@ -1246,7 +1279,8 @@ function insertModule(type) {
     seatColor: DEFAULT_SEAT_COLOR,
     backColor: hasBackColorBlock ? DEFAULT_BACK_COLOR : "",
     backLabel: "",
-    seatLabel: ""
+    seatLabel: "",
+    socketQty: 0   // 加購插座組數量；圓凳（SP-17-RPS）不可加購，固定為 0
   };
 
   modules.push(newModule);
@@ -1308,7 +1342,28 @@ function renderModuleDOM(mod) {
     }
   }, { passive: true });
 
+  // 若已有加購插座組數量（例如從專案載入），立即套用高亮邊框
+  if (mod.socketQty > 0) {
+    div.classList.add('socket-highlight');
+  }
+
   viewport.appendChild(div);
+}
+
+/**
+ * 更新畫布中模塊的插座高亮邊框狀態。
+ * socketQty > 0 → 套用黃色邊框；否則移除。
+ * @param {number} uid - 模塊的 uid
+ */
+function updateModuleSocketStyle(uid) {
+  const mod = modules.find(m => m.uid === uid);
+  const div = document.getElementById(`mod-${uid}`);
+  if (!mod || !div) return;
+  if (mod.socketQty > 0) {
+    div.classList.add('socket-highlight');
+  } else {
+    div.classList.remove('socket-highlight');
+  }
 }
 
 function updateModuleDOMPosition(mod) {
@@ -1941,26 +1996,30 @@ function setModuleColor(uid, key, color) {
 }
 
 function buildAggregatedRows() {
-  // 依「型號(id) + 註記(note)」完全相同進行彙整，數量加總
+  // 依「型號(id) + 布號 + 純用戶備註（不含自動標記）」彙整，數量加總
   const groups = new Map();
   modules.forEach(mod => {
-    const key = `${mod.id}\u0001${mod.backLabel}\u0001${mod.seatLabel}\u0001${mod.note}`;
+    // 移除自動插入的插座標記，取得純用戶備註作為分組 key
+    const cleanNote = mod.note.split(SOCKET_NOTE_SEPARATOR).join('').trim();
+    const key = `${mod.id}\u0001${mod.backLabel}\u0001${mod.seatLabel}\u0001${cleanNote}`;
     if (!groups.has(key)) {
       groups.set(key, {
-        name: mod.name,
-        id: mod.id,
-        spec: mod.spec || `${mod.width} × ${mod.height}`,
+        name:      mod.name,
+        id:        mod.id,
+        spec:      mod.spec || `${mod.width} × ${mod.height}`,
         backColor: mod.backColor,
         seatColor: mod.seatColor,
         backLabel: mod.backLabel,
         seatLabel: mod.seatLabel,
-        note: mod.note,
-        qty: 0,
-        uids: []
+        note:      cleanNote,   // 顯示純用戶備註，不含自動標記
+        qty:       0,
+        socketQtyTotal: 0,
+        uids:      []
       });
     }
     const g = groups.get(key);
     g.qty += 1;
+    g.socketQtyTotal += (mod.socketQty || 0);
     g.uids.push(mod.uid);
   });
   return Array.from(groups.values());
@@ -2047,6 +2106,12 @@ function renderTable() {
         seatInner.appendChild(lbl);
       }
 
+      // 彙整模式：加購插座組已獨立為底部品項，此欄留空
+      const tdSocket = document.createElement('td');
+      tdSocket.style.textAlign = 'center';
+      tdSocket.textContent = '—';
+      tdSocket.style.color = '#bbb';
+
       const tdNote = document.createElement('td');
       tdNote.className = 'note-cell';
       tdNote.textContent = g.note;
@@ -2057,9 +2122,63 @@ function renderTable() {
       tr.appendChild(tdQty);
       tr.appendChild(tdBackColor);
       tr.appendChild(tdSeatColor);
+      tr.appendChild(tdSocket);
       tr.appendChild(tdNote);
       tbody.appendChild(tr);
     });
+
+    // 計算全部模塊的插座組總量，作為獨立品項附加於清單末尾
+    const totalSocketQty = modules.reduce((sum, m) => sum + (m.socketQty || 0), 0);
+    if (totalSocketQty > 0) {
+      // 分隔線列
+      const sepTr = document.createElement('tr');
+      const sepTd = document.createElement('td');
+      sepTd.colSpan = 8;
+      sepTd.style.padding = '0';
+      sepTd.style.borderTop = '2px dashed #FFCE1B';
+      sepTr.appendChild(sepTd);
+      tbody.appendChild(sepTr);
+
+      // 加購插座組獨立品項列
+      const socketTr = document.createElement('tr');
+      socketTr.style.background = '#fffbea';
+
+      const sTdName = document.createElement('td');
+      sTdName.textContent = '加購插座組';
+      sTdName.style.color = '#b8860b';
+      sTdName.style.fontWeight = 'bold';
+
+      const sTdId = document.createElement('td');
+      sTdId.textContent = 'SP-17-A01';
+      sTdId.style.fontWeight = 'bold';
+      sTdId.style.color = '#b8860b';
+
+      const sTdSpec = document.createElement('td');
+      sTdSpec.textContent = '';
+
+      const sTdQty = document.createElement('td');
+      sTdQty.style.textAlign = 'center';
+      sTdQty.style.fontWeight = 'bold';
+      sTdQty.style.color = '#b8860b';
+      sTdQty.textContent = totalSocketQty;
+
+      // 其餘欄（椅背、坐墊、加購插座組欄、註記）空白
+      const sTdEmpty1 = document.createElement('td');
+      const sTdEmpty2 = document.createElement('td');
+      const sTdEmpty3 = document.createElement('td');
+      const sTdEmpty4 = document.createElement('td');
+
+      socketTr.appendChild(sTdName);
+      socketTr.appendChild(sTdId);
+      socketTr.appendChild(sTdSpec);
+      socketTr.appendChild(sTdQty);
+      socketTr.appendChild(sTdEmpty1);
+      socketTr.appendChild(sTdEmpty2);
+      socketTr.appendChild(sTdEmpty3);
+      socketTr.appendChild(sTdEmpty4);
+      tbody.appendChild(socketTr);
+    }
+
     return;
   }
 
@@ -2100,11 +2219,40 @@ function renderTable() {
     const textarea = document.createElement('textarea');
     textarea.value = mod.note;
     textarea.placeholder = "點擊輸入備註...";
+    textarea.id = `note-textarea-${mod.uid}`;
     textarea.onclick = (e) => e.stopPropagation();
     textarea.oninput = (e) => {
       mod.note = e.target.value;
     };
     tdNote.appendChild(textarea);
+
+    // 加購插座組欄位
+    const tdSocket = document.createElement('td');
+    tdSocket.style.textAlign = 'center';
+    const isRPS = mod.id === 'SP-17-RPS';
+    if (isRPS) {
+      // 圓凳不可加購，顯示 em dash
+      tdSocket.textContent = '—';
+      tdSocket.style.color = '#bbb';
+    } else {
+      const socketInput = document.createElement('input');
+      socketInput.type = 'number';
+      socketInput.className = 'socket-qty-input';
+      socketInput.id = `socket-input-${mod.uid}`;
+      socketInput.min = '0';
+      socketInput.step = '1';
+      socketInput.value = mod.socketQty > 0 ? mod.socketQty : '';
+      socketInput.placeholder = '0';
+      socketInput.onclick = (e) => e.stopPropagation();
+      socketInput.oninput = (e) => {
+        const val = parseInt(e.target.value, 10);
+        mod.socketQty = (isNaN(val) || val < 0) ? 0 : val;
+        updateModuleSocketStyle(mod.uid);
+        syncSocketNote(mod.uid);
+        renderSocketSubRow(mod.uid);
+      };
+      tdSocket.appendChild(socketInput);
+    }
 
     tr.appendChild(tdName);
     tr.appendChild(tdId);
@@ -2112,9 +2260,134 @@ function renderTable() {
     tr.appendChild(tdQty);
     tr.appendChild(tdBackColor);
     tr.appendChild(tdSeatColor);
+    tr.appendChild(tdSocket);
     tr.appendChild(tdNote);
     tbody.appendChild(tr);
   });
+
+  // 補回各模塊的插座組子列（renderTable 重建 DOM 後需重新插入）
+  modules.forEach(mod => renderSocketSubRow(mod.uid));
+}
+
+// ==========================================
+// 插座組：同步註記 & 子列（任務三、五實作）
+// ==========================================
+const SOCKET_NOTE_TAG = '加購插座組';
+const SOCKET_NOTE_SEPARATOR = '\n[加購插座組]';
+
+/**
+ * 根據 mod.socketQty 自動在 mod.note 附加或移除「加購插座組」標記。
+ * 規則：
+ *  - socketQty > 0 → 若 note 尾端尚未有標記，附加 SOCKET_NOTE_SEPARATOR
+ *  - socketQty = 0 → 移除 SOCKET_NOTE_SEPARATOR（若存在），還原原始內容
+ * 不覆蓋使用者手寫的其他備註內容。
+ * 最後同步更新表格中對應 textarea 的顯示值。
+ */
+function syncSocketNote(uid) {
+  const mod = modules.find(m => m.uid === uid);
+  if (!mod || mod.id === 'SP-17-RPS') return;
+
+  const hasTag = mod.note.includes(SOCKET_NOTE_SEPARATOR);
+
+  if (mod.socketQty > 0) {
+    // 需要標記，且尚未存在 → 附加
+    if (!hasTag) {
+      mod.note = mod.note + SOCKET_NOTE_SEPARATOR;
+    }
+  } else {
+    // 需要移除標記
+    if (hasTag) {
+      mod.note = mod.note.split(SOCKET_NOTE_SEPARATOR).join('');
+    }
+  }
+
+  // 同步更新表格中的 textarea 顯示
+  const textarea = document.getElementById(`note-textarea-${uid}`);
+  if (textarea) {
+    textarea.value = mod.note;
+  }
+}
+
+/**
+ * 在模塊列（row-{uid}）下方插入、更新或移除「加購插座組」子列。
+ * - socketQty > 0 且非圓凳 → 插入/更新子列
+ * - socketQty = 0 或圓凳   → 移除子列（若存在）
+ * 僅在明細模式（!isAggregated）下操作。
+ */
+function renderSocketSubRow(uid) {
+  const SUBROW_ID = `socket-subrow-${uid}`;
+  const existingSubRow = document.getElementById(SUBROW_ID);
+
+  // 彙整模式：不顯示子列
+  if (isAggregated) {
+    if (existingSubRow) existingSubRow.remove();
+    return;
+  }
+
+  const mod = modules.find(m => m.uid === uid);
+  if (!mod || mod.id === 'SP-17-RPS' || mod.socketQty <= 0) {
+    if (existingSubRow) existingSubRow.remove();
+    return;
+  }
+
+  // 建立或更新子列
+  const parentRow = document.getElementById(`row-${uid}`);
+  if (!parentRow) return;
+
+  if (existingSubRow) {
+    // 更新數量欄
+    const qtyCell = existingSubRow.querySelector('.socket-subrow-qty');
+    if (qtyCell) qtyCell.textContent = mod.socketQty;
+  } else {
+    // 新建子列
+    const subTr = document.createElement('tr');
+    subTr.id = SUBROW_ID;
+    subTr.style.background = '#fffbea';
+
+    // 名稱欄
+    const tdName = document.createElement('td');
+    tdName.textContent = '加購插座組';
+    tdName.style.paddingLeft = '20px';
+    tdName.style.color = '#b8860b';
+    tdName.style.fontSize = '11px';
+
+    // 型號欄
+    const tdId = document.createElement('td');
+    tdId.textContent = 'SP-17-A01';
+    tdId.style.fontWeight = 'bold';
+    tdId.style.color = '#b8860b';
+    tdId.style.fontSize = '11px';
+
+    // 規格欄（空白）
+    const tdSpec = document.createElement('td');
+    tdSpec.textContent = '';
+
+    // 數量欄
+    const tdQty = document.createElement('td');
+    tdQty.className = 'socket-subrow-qty';
+    tdQty.style.textAlign = 'center';
+    tdQty.style.fontWeight = 'bold';
+    tdQty.style.color = '#b8860b';
+    tdQty.textContent = mod.socketQty;
+
+    // 其餘欄（椅背、坐墊、加購插座組input、註記）空白
+    const tdEmpty1 = document.createElement('td');
+    const tdEmpty2 = document.createElement('td');
+    const tdEmpty3 = document.createElement('td');
+    const tdEmpty4 = document.createElement('td');
+
+    subTr.appendChild(tdName);
+    subTr.appendChild(tdId);
+    subTr.appendChild(tdSpec);
+    subTr.appendChild(tdQty);
+    subTr.appendChild(tdEmpty1);
+    subTr.appendChild(tdEmpty2);
+    subTr.appendChild(tdEmpty3);
+    subTr.appendChild(tdEmpty4);
+
+    // 插入在父列之後
+    parentRow.insertAdjacentElement('afterend', subTr);
+  }
 }
 
 // ==========================================
@@ -2143,7 +2416,8 @@ function saveProject() {
       backColor:  mod.backColor,
       seatLabel:  mod.seatLabel,
       backLabel:  mod.backLabel,
-      note:       mod.note
+      note:       mod.note,
+      socketQty:  mod.socketQty || 0
     }))
   };
 
@@ -2217,10 +2491,13 @@ function loadProject(event) {
         backColor: saved.backColor ?? DEFAULT_BACK_COLOR,
         seatLabel: saved.seatLabel || '',
         backLabel: saved.backLabel || '',
-        note:      saved.note || ''
+        note:      saved.note || '',
+        socketQty: (saved.id === 'SP-17-RPS') ? 0 : (saved.socketQty || 0)
       };
       modules.push(mod);
       renderModuleDOM(mod);
+      // 確保載入的資料 note 與 socketQty 狀態一致
+      syncSocketNote(mod.uid);
     });
 
     renderTable();
@@ -2244,10 +2521,15 @@ function exportCSV() {
   if (isAggregated) {
     const rows = buildAggregatedRows();
     rows.forEach(g => {
-      const backLbl  = g.backColor  ? (g.backLabel  || '') : '';
-      const seatLbl  = g.seatLabel  || '';
+      const backLbl = g.backColor ? (g.backLabel || '') : '';
+      const seatLbl = g.seatLabel || '';
       csvContent += `${escCSV(g.name)},${escCSV(g.id)},${escCSV(g.spec)},${escCSV(String(g.qty))},${escCSV(backLbl)},${escCSV(seatLbl)},${escCSV(g.note)}\n`;
     });
+    // 加購插座組獨立品項
+    const totalSocketQty = modules.reduce((sum, m) => sum + (m.socketQty || 0), 0);
+    if (totalSocketQty > 0) {
+      csvContent += `${escCSV('加購插座組')},${escCSV('SP-17-A01')},"","${totalSocketQty}","","",""\n`;
+    }
   } else {
     modules.forEach(mod => {
       const backLbl  = mod.backColor ? (mod.backLabel  || '') : '';
