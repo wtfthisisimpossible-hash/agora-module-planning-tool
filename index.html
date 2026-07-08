@@ -1996,12 +1996,13 @@ function setModuleColor(uid, key, color) {
 }
 
 function buildAggregatedRows() {
-  // 依「型號(id) + 布號 + 純用戶備註（不含自動標記）」彙整，數量加總
+  // 依「型號(id) + 布號 + 純用戶備註 + 是否加購插座組」彙整，數量加總
   const groups = new Map();
   modules.forEach(mod => {
     // 移除自動插入的插座標記，取得純用戶備註作為分組 key
     const cleanNote = mod.note.split(SOCKET_NOTE_SEPARATOR).join('').trim();
-    const key = `${mod.id}\u0001${mod.backLabel}\u0001${mod.seatLabel}\u0001${cleanNote}`;
+    const hasSocket = (mod.socketQty || 0) > 0 ? '1' : '0';
+    const key = `${mod.id}\u0001${mod.backLabel}\u0001${mod.seatLabel}\u0001${cleanNote}\u0001${hasSocket}`;
     if (!groups.has(key)) {
       groups.set(key, {
         name:      mod.name,
@@ -2011,7 +2012,7 @@ function buildAggregatedRows() {
         seatColor: mod.seatColor,
         backLabel: mod.backLabel,
         seatLabel: mod.seatLabel,
-        note:      cleanNote,   // 顯示純用戶備註，不含自動標記
+        cleanNote: cleanNote,
         qty:       0,
         socketQtyTotal: 0,
         uids:      []
@@ -2022,7 +2023,15 @@ function buildAggregatedRows() {
     g.socketQtyTotal += (mod.socketQty || 0);
     g.uids.push(mod.uid);
   });
-  return Array.from(groups.values());
+
+  // 決定每個群組的顯示 note：若群組內有加購插座組，附加標記
+  const result = Array.from(groups.values());
+  result.forEach(g => {
+    g.note = g.socketQtyTotal > 0
+      ? (g.cleanNote ? g.cleanNote + SOCKET_NOTE_SEPARATOR : SOCKET_NOTE_SEPARATOR.trim())
+      : g.cleanNote;
+  });
+  return result;
 }
 
 function toggleAggregate() {
