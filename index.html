@@ -513,7 +513,15 @@ tr.multi-selected-row td {
       </div>
 
 
-      <p class="hint">點擊畫布中的模塊進行選取，再執行旋轉或微調。</p>
+      <p class="hint">選取畫布中的模塊，再執行旋轉或微調。</p>
+    </div>
+
+    <hr class="divider">
+
+    <div class="section">
+      <div class="section-title">複製選取模塊</div>
+      <button class="btn" onclick="duplicateSelected()" title="快捷鍵：Ctrl+D">⧉ 複製選取模塊</button>
+      <p class="hint">複製目前選取的模塊。快捷鍵：Ctrl+D</p>
     </div>
 
     <hr class="divider">
@@ -807,6 +815,13 @@ document.addEventListener("DOMContentLoaded", () => {
         e.preventDefault();
         deleteSelected();
       }
+    }
+    // Ctrl+D / Cmd+D：複製選取模塊
+    if ((e.ctrlKey || e.metaKey) && e.key === 'd' && !e.repeat) {
+      const tag = document.activeElement && document.activeElement.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      e.preventDefault();
+      duplicateSelected();
     }
   });
 
@@ -2688,6 +2703,96 @@ function captureCanvas() {
     showToast("平面圖下載完成");
   }
 }
+// ==========================================
+// 複製選取模塊（Ctrl+D）
+// ==========================================
+function duplicateSelected() {
+  // 收集目前選取的所有模塊（單選 + 多選）
+  const targetUids = new Set();
+  if (selectedUid !== null) targetUids.add(selectedUid);
+  selectedUids.forEach(uid => targetUids.add(uid));
+
+  if (targetUids.size === 0) {
+    showToast('請先選取要複製的模塊');
+    return;
+  }
+
+  const targets = [...targetUids].map(uid => modules.find(m => m.uid === uid)).filter(Boolean);
+
+  // 計算被選取群組的 bounding box
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  targets.forEach(mod => {
+    const wPx = mod.width * SCALE;
+    const hPx = mod.height * SCALE;
+    if (mod.x < minX) minX = mod.x;
+    if (mod.y < minY) minY = mod.y;
+    if (mod.x + wPx > maxX) maxX = mod.x + wPx;
+    if (mod.y + hPx > maxY) maxY = mod.y + hPx;
+  });
+
+  // 偏移量：bounding box 右邊 + 20px 間距
+  const offsetX = (maxX - minX) + 20 / canvasZoom;
+  const offsetY = 0;
+
+  // 先清除目前選取狀態
+  if (selectedUid !== null) {
+    const prevDiv = document.getElementById(`mod-${selectedUid}`);
+    if (prevDiv) prevDiv.classList.remove('selected');
+    const prevRow = document.getElementById(`row-${selectedUid}`);
+    if (prevRow) prevRow.style.background = '';
+    selectedUid = null;
+  }
+  selectedUids.forEach(uid => {
+    const div = document.getElementById(`mod-${uid}`);
+    if (div) { div.classList.remove('selected'); div.classList.remove('multi-selected'); }
+    const row = document.getElementById(`row-${uid}`);
+    if (row) { row.style.background = ''; row.classList.remove('multi-selected-row'); }
+  });
+  selectedUids.clear();
+
+  // 建立副本
+  const newUids = [];
+  const baseTime = Date.now();
+  targets.forEach((mod, i) => {
+    const newUid = baseTime + i * 7 + Math.floor(Math.random() * 100);
+    const copy = {
+      uid:       newUid,
+      id:        mod.id,
+      name:      mod.name,
+      width:     mod.width,
+      height:    mod.height,
+      spec:      mod.spec,
+      x:         mod.x + offsetX,
+      y:         mod.y + offsetY,
+      rotate:    mod.rotate,
+      note:      mod.note,
+      seatColor: mod.seatColor,
+      backColor: mod.backColor,
+      backLabel: mod.backLabel,
+      seatLabel: mod.seatLabel,
+      socketQty: mod.id === 'SP-17-RPS' ? 0 : (mod.socketQty || 0)
+    };
+    modules.push(copy);
+    renderModuleDOM(copy);
+    newUids.push(newUid);
+  });
+
+  // 選取所有新副本（群組選取）
+  if (newUids.length === 1) {
+    selectModule(newUids[0]);
+  } else {
+    newUids.forEach(uid => {
+      selectedUids.add(uid);
+      const div = document.getElementById(`mod-${uid}`);
+      if (div) div.classList.add('multi-selected');
+    });
+  }
+
+  renderTable();
+  updateEmptyHint();
+  showToast(`已複製 ${targets.length} 個模塊`);
+}
+
 // ==========================================
 // 多選模式切換（iPad 專用）
 // ==========================================
