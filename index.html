@@ -758,7 +758,8 @@ function getModuleImageUrl(modelId, seatColor, backColor) {
 const SCALE = 0.1;
 // 吸附閾值（邏輯像素）
 const SNAP_THRESHOLD = 3;
-// 縮放範圍
+// 切線對齊最大允許偏移量（邏輯像素）：超過此值不強制對齊，避免遠距拉扯
+const TANGENT_SNAP_THRESHOLD = 40;
 const ZOOM_MIN = 0.3;
 const ZOOM_MAX = 3.0;
 
@@ -1106,8 +1107,19 @@ function vertsToSegments(verts) {
   return segs; // 格式：[ax,ay,bx,by, ax,ay,bx,by, ...]
 }
 
-/** 找 seg1 各取樣點對 seg2 的最近 (dx,dy) */
+/**
+ * 找 seg1 各取樣點對 seg2 的最近 (dx,dy)，
+ * 並額外計算切線方向對齊偏移 (tdx,tdy) 供任務二/三使用。
+ *
+ * 回傳：
+ *  dist        — 最近距離（總向量長度）
+ *  dx, dy      — 法線方向偏移（讓 seg1 貼上 seg2）
+ *  isParallel  — 兩線段是否近似平行（夾角 < PARALLEL_ANGLE_TOL）
+ *  tdx, tdy    — 切線方向對齊偏移（僅 isParallel 時有意義）
+ *  normalDist  — 純法線距離（垂直距離，用於判斷是否為面對面吸附）
+ */
 function seg2segSnap(a1x,a1y,b1x,b1y, a2x,a2y,b2x,b2y) {
+  // ── 1. 原有邏輯：找最近取樣點的法線偏移 ──
   const SAMPLES = 5;
   let bestDistSq = Infinity, bdx = 0, bdy = 0;
   for (let i = 0; i <= SAMPLES; i++) {
@@ -1119,17 +1131,86 @@ function seg2segSnap(a1x,a1y,b1x,b1y, a2x,a2y,b2x,b2y) {
     const ddx = cpx-px, ddy = cpy-py, distSq = ddx*ddx+ddy*ddy;
     if (distSq < bestDistSq) { bestDistSq=distSq; bdx=ddx; bdy=ddy; }
   }
-  return { dist: Math.sqrt(bestDistSq), dx: bdx, dy: bdy };
+  const dist = Math.sqrt(bestDistSq);
+
+  // ── 2. 判斷兩線段是否近似平行 ──
+  const PARALLEL_ANGLE_TOL = 0.12; // sin(約7°) 以內視為平行
+  const d1x = b1x-a1x, d1y = b1y-a1y;
+  const d2x = b2x-a2x, d2y = b2y-a2y;
+  const len1 = Math.sqrt(d1x*d1x+d1y*d1y);
+  const len2 = Math.sqrt(d2x*d2x+d2y*d2y);
+
+  if (len1 < 1e-6 || len2 < 1e-6) {
+    // 退化線段：無法判斷平行，直接回傳法線結果
+    return { dist, dx: bdx, dy: bdy, isParallel: false, tdx: 0, tdy: 0, normalDist: dist };
+  }
+
+  // 單位向量
+  const u1x = d1x/len1, u1y = d1y/len1; // seg1 切線方向
+  const u2x = d2x/len2, u2y = d2y/len2; // seg2 切線方向
+
+  // 叉積絕對值 = |sin θ|，越小越平行
+  const crossAbs = Math.abs(u1x*u2y - u1y*u2x);
+  const isParallel = crossAbs < PARALLEL_ANGLE_TOL;
+
+  // ── 3. 純法線距離（連接中點垂直於切線的分量） ──
+  // 使用 seg1 中點到 seg2 的最近點距離在法線方向上的投影
+  const mid1x = (a1x+b1x)*0.5, mid1y = (a1y+b1y)*0.5;
+  const toMid2x = mid1x-a2x, toMid2y = mid1y-a2y;
+  // 法線方向（垂直於 seg2）
+  const nx = -u2y, ny = u2x;
+  const normalDist = Math.abs(toMid2x*nx + toMid2y*ny);
+
+  // ── 4. 切線對齊偏移（僅平行時計算） ──
+  let tdx = 0, tdy = 0;
+  if (isParallel) {
+    // 使用 seg2 的切線方向做投影軸
+    // 將 seg1 兩端點投影到 seg2 所在的切線軸
+    const proj_a1 = a1x*u2x + a1y*u2y;
+    const proj_b1 = b1x*u2x + b1y*u2y;
+    // seg2 兩端點的投影值
+    const proj_a2 = a2x*u2x + a2y*u2y;
+    const proj_b2 = b2x*u2x + b2y*u2y;
+
+    // seg1、seg2 在切線軸上的範圍（排序）
+    const s1min = Math.min(proj_a1, proj_b1);
+    const s1max = Math.max(proj_a1, proj_b1);
+    const s2min = Math.min(proj_a2, proj_b2);
+    const s2max = Math.max(proj_a2, proj_b2);
+
+    // 計算讓 seg1 端點對齊 seg2 端點所需的最小切線偏移：
+    // 若 seg1 的 min 端偏左 → 往右推；若 max 端偏右 → 往左推
+    // 取絕對值較小的那個（最小移動量）
+    const shiftToAlignMin = s2min - s1min; // 讓 seg1.min 對齊 seg2.min
+    const shiftToAlignMax = s2max - s1max; // 讓 seg1.max 對齊 seg2.max
+
+    let tShift = 0;
+    if (Math.abs(shiftToAlignMin) < Math.abs(shiftToAlignMax)) {
+      tShift = shiftToAlignMin;
+    } else {
+      tShift = shiftToAlignMax;
+    }
+
+    tdx = tShift * u2x;
+    tdy = tShift * u2y;
+  }
+
+  return { dist, dx: bdx, dy: bdy, isParallel, tdx, tdy, normalDist };
 }
 
 /**
  * 主吸附函數：
  * draggedMods = 被拖曳的模塊陣列（傳入才啟用多邊形吸附）
  * 退回模式：傳統包圍盒（draggedMods 為空時）
+ *
+ * 回傳 { dx, dy, tdx, tdy }：
+ *   dx/dy   — 法線吸附偏移（讓吸附邊貼合）
+ *   tdx/tdy — 切線對齊偏移（讓對齊邊對齊，任務三套用）
+ *             僅當最佳吸附對為共線平行（isParallel && normalDist < SNAP_THRESHOLD）時非零
  */
 function getSnapDelta(tx, ty, tw, th, excludeUids, draggedMods) {
   const statics = modules.filter(m => !excludeUids.has(m.uid));
-  if (statics.length === 0) return { dx: 0, dy: 0 };
+  if (statics.length === 0) return { dx: 0, dy: 0, tdx: 0, tdy: 0 };
 
   // 取被拖曳模塊的線段
   let dSegs = []; // [ax,ay,bx,by,...]
@@ -1142,7 +1223,10 @@ function getSnapDelta(tx, ty, tw, th, excludeUids, draggedMods) {
     dSegs = [tx,ty,tx+tw,ty, tx+tw,ty,tx+tw,ty+th, tx+tw,ty+th,tx,ty+th, tx,ty+th,tx,ty];
   }
 
-  let bestDist = SNAP_THRESHOLD + 0.001, bestDx = 0, bestDy = 0;
+  let bestDist = SNAP_THRESHOLD + 0.001;
+  let bestDx = 0, bestDy = 0;
+  // 最佳吸附對的切線對齊資訊
+  let bestTdx = 0, bestTdy = 0;
 
   statics.forEach(o => {
     const oV = getModuleWorldVertices(o);
@@ -1158,12 +1242,23 @@ function getSnapDelta(tx, ty, tw, th, excludeUids, draggedMods) {
           bestDist = r.dist;
           bestDx = r.dx;
           bestDy = r.dy;
+
+          // 辨識「共線吸附對」：平行 且 法線距離在閾值內 → 帶入切線偏移
+          // normalDist < SNAP_THRESHOLD 確保是「面對面」吸附，而非端點剛好碰到線
+          if (r.isParallel && r.normalDist < SNAP_THRESHOLD) {
+            bestTdx = r.tdx;
+            bestTdy = r.tdy;
+          } else {
+            // 非共線吸附（斜角相碰、端點對線等）→ 不觸發切線對齊
+            bestTdx = 0;
+            bestTdy = 0;
+          }
         }
       }
     }
   });
 
-  return { dx: bestDx, dy: bestDy };
+  return { dx: bestDx, dy: bestDy, tdx: bestTdx, tdy: bestTdy };
 }
 
 function initSelectData(type) {
@@ -1742,6 +1837,12 @@ function startDrag(e, mod) {
       tentative.forEach(({ m, x, y }) => {
         m.x = x + snap.dx;
         m.y = y + snap.dy;
+        // 切線對齊：在法線吸附發生後，若偏移量在容許範圍內才套用
+        const tLen = Math.sqrt(snap.tdx * snap.tdx + snap.tdy * snap.tdy);
+        if (tLen > 0 && tLen <= TANGENT_SNAP_THRESHOLD) {
+          m.x += snap.tdx;
+          m.y += snap.tdy;
+        }
         updateModuleDOMPosition(m);
       });
     } else {
@@ -1759,6 +1860,12 @@ function startDrag(e, mod) {
 
       nx += snap.dx;
       ny += snap.dy;
+      // 切線對齊：在法線吸附發生後，若偏移量在容許範圍內才套用
+      const tLen = Math.sqrt(snap.tdx * snap.tdx + snap.tdy * snap.tdy);
+      if (tLen > 0 && tLen <= TANGENT_SNAP_THRESHOLD) {
+        nx += snap.tdx;
+        ny += snap.tdy;
+      }
 
       mod.x = nx;
       mod.y = ny;
