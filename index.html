@@ -11,6 +11,16 @@ body { font-family: "Microsoft JhengHei", "PingFang TC", sans-serif; font-size: 
 
 .app { display: flex; height: 100vh; border: 2px solid #888; overflow: hidden; }
 
+/* ── 任務一：響應式基礎斷點 ── */
+@media (max-width: 900px) {
+  .app {
+    flex-direction: column;
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+}
+
 .panel {
   width: 250px; min-width: 250px;
   background: #f7f5f2;
@@ -189,6 +199,27 @@ body { font-family: "Microsoft JhengHei", "PingFang TC", sans-serif; font-size: 
   touch-action: none; /* 阻止瀏覽器原生縮放/捲動，讓自訂手勢完整接管 */
 }
 
+/* ── 任務三：畫布區高度自適應 ── */
+@media (max-width: 900px) {
+  .canvas-area {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+  }
+  .canvas-header {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-left: 125px;
+  }
+  .canvas {
+    height: 50dvh;
+    flex: none;
+  }
+  .canvas-title {
+    display: none;
+  }
+}
+
 /* 多選模式啟用時按鈕高亮 */
 .btn.multiselect-active {
   border-color: #e67e22 !important;
@@ -205,6 +236,19 @@ body { font-family: "Microsoft JhengHei", "PingFang TC", sans-serif; font-size: 
 }
 
 .list-area { background: #f7f5f2;min-height: 300px ;max-height: 400px; overflow-y: auto; }
+
+/* ── 任務四：配置清單自適應 ── */
+@media (max-width: 900px) {
+  .list-area {
+    min-height: unset;
+    max-height: 35dvh;
+    overflow-y: auto;
+    overflow-x: auto;
+  }
+  .list-area > table {
+    min-width: 820px;
+  }
+}
 
 .list-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -426,6 +470,93 @@ tr.multi-selected-row td {
   background: #fff3e0 !important;
 }
 
+/* ── 任務二：Panel 收合抽屜化 ── */
+#panel-toggle {
+  display: none;
+}
+@media (max-width: 900px) {
+  #panel-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 300;
+    padding: 7px 12px;
+    background: #f7f5f2;
+    border: 1.5px solid #888;
+    border-radius: 5px;
+    font-size: 13px;
+    font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px;
+    max-width: 85vw;
+    height: 100dvh;
+    z-index: 250;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 0 16px rgba(0,0,0,0.18);
+    border-right: 2px solid #888;
+    padding-top: 52px;
+  }
+  .panel.panel-open {
+    transform: translateX(0);
+  }
+  #panel-close {
+    display: flex;
+  }
+}
+#panel-close {
+  display: none;
+  align-items: center;
+  justify-content: flex-end;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 4px 10px;
+  border: 1.5px solid #888;
+  border-radius: 5px;
+  background: #fff;
+  font-size: 12px;
+  font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+  cursor: pointer;
+}
+#panel-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 200;
+}
+#panel-overlay.overlay-show {
+  display: block;
+}
+
+/* ── 任務五：細節調整 ── */
+@media (max-width: 900px) {
+  body { font-size: 13px; }
+  .btn { padding: 6px 10px; font-size: 12px; }
+  .panel-title { font-size: 14px; }
+  .section-title { font-size: 10px; }
+  .hint { font-size: 10px; }
+  .custom-select-options { max-height: 45dvh; z-index: 300; }
+  .color-popup { z-index: 320; }
+  .list-header .btn { padding: 3px 8px; font-size: 11px; }
+  table { font-size: 11px; }
+  th { padding: 5px 6px; }
+  td { padding: 4px 6px; }
+  .note-cell textarea { font-size: 11px; min-height: 26px; }
+  .fabric-label-input { width: 52px; font-size: 10px; padding: 2px 3px; }
+  .socket-qty-input { width: 40px; }
+}
+
 /* 吐司通知樣式 */
 .toast {
   position: fixed;
@@ -442,12 +573,23 @@ tr.multi-selected-row td {
   pointer-events: none;
 }
 .toast.show { transform: translateX(-50%) translateY(0); }
+@media (max-width: 900px) {
+  .toast { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
+}
 </style>
 </head>
 <body>
 
+<!-- 遮罩層（小螢幕 panel 展開時顯示） -->
+<div id="panel-overlay" onclick="closePanelDrawer()"></div>
+
+<!-- 漢堡按鈕（小螢幕專用） -->
+<button id="panel-toggle" onclick="openPanelDrawer()">☰ 模塊選單</button>
+
 <div class="app">
-  <div class="panel">
+  <div class="panel" id="panel">
+    <!-- 關閉按鈕（小螢幕 panel 內顯示） -->
+    <button id="panel-close" onclick="closePanelDrawer()">✕ 關閉</button>
     <div class="panel-title">Agora沙發模塊</div>
 
     <div class="section">
@@ -513,7 +655,7 @@ tr.multi-selected-row td {
       </div>
 
 
-      <p class="hint">選取畫布中的模塊，再執行旋轉或微調。</p>
+      <p class="hint">點擊畫布中的模塊進行選取，再執行旋轉或微調。</p>
     </div>
 
     <hr class="divider">
@@ -521,7 +663,7 @@ tr.multi-selected-row td {
     <div class="section">
       <div class="section-title">複製選取模塊</div>
       <button class="btn" onclick="duplicateSelected()" title="快捷鍵：Ctrl+D">⧉ 複製選取模塊</button>
-      <p class="hint">複製目前選取的模塊。快捷鍵：Ctrl+D</p>
+      <p class="hint">複製目前選取的模塊（含顏色、備註），以群組方式貼至畫布空白處。快捷鍵：Ctrl+D</p>
     </div>
 
     <hr class="divider">
@@ -543,7 +685,7 @@ tr.multi-selected-row td {
   <div class="canvas-area">
     <div class="canvas-header">
       <div style="display:flex; align-items:center; gap:10px;">
-        <span>AGORA 2D 配置區</span>
+        <span class="canvas-title">AGORA 2D 配置區</span>
         <button class="btn" style="padding: 4px 12px; font-size: 12px; font-weight: bold; border-color: #3a8a3a; color: #3a8a3a;" onclick="saveProject()" title="將目前配置儲存為 .agora 專案檔">💾 儲存專案</button>
         <label class="btn" style="padding: 4px 12px; font-size: 12px; font-weight: bold; border-color: #3a8a3a; color: #3a8a3a; cursor: pointer; margin: 0;" title="載入先前儲存的 .agora 專案檔">📂 載入專案<input type="file" id="loadProjectInput" accept=".agora" style="display:none;" onchange="loadProject(event)"></label>
       </div>
@@ -2917,6 +3059,21 @@ function toggleMultiSelectMode() {
     selectedUid = null;
     showToast('多選模式已關閉');
   }
+}
+
+// ==========================================
+// 任務二：Panel 抽屜開關（小螢幕專用）
+// ==========================================
+function openPanelDrawer() {
+  document.getElementById('panel').classList.add('panel-open');
+  document.getElementById('panel-overlay').classList.add('overlay-show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePanelDrawer() {
+  document.getElementById('panel').classList.remove('panel-open');
+  document.getElementById('panel-overlay').classList.remove('overlay-show');
+  document.body.style.overflow = '';
 }
 
 // ==========================================
