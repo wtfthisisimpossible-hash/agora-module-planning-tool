@@ -41,6 +41,69 @@ body { font-family: "Microsoft JhengHei", "PingFang TC", sans-serif; font-size: 
 }
 .section { display: flex; flex-direction: column; gap: 6px; }
 
+/* ── 插入模塊收合群組 ── */
+.insert-group {
+  display: flex; flex-direction: column; gap: 0;
+  border: 1.5px solid #c8c3bc;
+  border-radius: 7px;
+  overflow: visible;
+  background: #fff;
+}
+.insert-group-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 10px;
+  background: #edeae5;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px; font-weight: bold; color: #333;
+  border-bottom: 1.5px solid #c8c3bc;
+  border-radius: 5px 5px 0 0;
+  transition: background 0.15s;
+}
+.insert-group-header:hover { background: #e4e0da; }
+.insert-group-header .ig-arrow {
+  font-size: 10px; color: #666;
+  transition: transform 0.2s;
+  display: inline-block;
+}
+.insert-group.open .insert-group-header .ig-arrow { transform: rotate(180deg); }
+.insert-group-body {
+  display: none;
+  flex-direction: column;
+  gap: 0;
+}
+.insert-group.open .insert-group-body { display: flex; }
+.insert-tab-bar {
+  display: flex;
+  border-bottom: 1.5px solid #c8c3bc;
+  background: #f5f3f0;
+}
+.insert-tab {
+  flex: 1;
+  padding: 6px 2px;
+  text-align: center;
+  font-size: 11px; font-weight: bold; color: #666;
+  cursor: pointer;
+  border-right: 1px solid #c8c3bc;
+  transition: background 0.1s, color 0.1s;
+  user-select: none;
+  white-space: nowrap;
+}
+.insert-tab:last-child { border-right: none; }
+.insert-tab:hover { background: #ece8e2; color: #333; }
+.insert-tab.active {
+  background: #fff; color: #1a1a1a;
+  border-bottom: 2px solid #1a1a1a;
+  margin-bottom: -1.5px;
+}
+.insert-panel {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+}
+.insert-panel.active { display: flex; }
+
 /* 客製化下拉選單樣式 */
 .custom-select {
   position: relative;
@@ -70,17 +133,14 @@ body { font-family: "Microsoft JhengHei", "PingFang TC", sans-serif; font-size: 
   transform: rotate(180deg);
 }
 .custom-select-options {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
+  position: fixed;
   background: #fff;
   border: 1.5px solid #888;
   border-radius: 5px;
   margin-top: 4px;
   max-height: 260px;
   overflow-y: auto;
-  z-index: 100;
+  z-index: 9999;
   display: none;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
@@ -592,79 +652,88 @@ tr.multi-selected-row td {
     <button id="panel-close" onclick="closePanelDrawer()">✕ 關閉</button>
     <div class="panel-title">Agora沙發模塊</div>
 
-    <div class="section">
-      <div class="section-title">直型模塊</div>
-      <div class="custom-select" id="straight-custom-select">
-        <div class="custom-select-trigger" onclick="event.stopPropagation(); toggleSelect('straight')">
-          <div class="trigger-content" id="straight-trigger-content">
-            <span>選擇直型模塊</span>
-          </div>
+    <!-- ── 插入模塊收合群組 ── -->
+    <div class="insert-group open" id="insert-group">
+      <div class="insert-group-header" onclick="toggleInsertGroup()">
+        <span>➕ 插入模塊</span>
+        <span class="ig-arrow">▼</span>
+      </div>
+      <div class="insert-group-body">
+        <!-- 分頁標籤 -->
+        <div class="insert-tab-bar">
+          <div class="insert-tab active" id="itab-straight" onclick="switchInsertTab('straight')">直型</div>
+          <div class="insert-tab" id="itab-corner" onclick="switchInsertTab('corner')">轉角</div>
+          <div class="insert-tab" id="itab-other" onclick="switchInsertTab('other')">其他</div>
+          <div class="insert-tab" id="itab-custom" onclick="switchInsertTab('custom')">訂製</div>
         </div>
-        <div class="custom-select-options" id="straight-options-list"></div>
-      </div>
-      <select id="straight-select" style="display: none;"></select>
-      <button class="btn" onclick="insertModule('straight')">插入直型模塊</button>
-    </div>
 
-    <hr class="divider">
-
-    <div class="section">
-      <div class="section-title">轉角模塊</div>
-      <div class="custom-select" id="corner-custom-select">
-        <div class="custom-select-trigger" onclick="event.stopPropagation(); toggleSelect('corner')">
-          <div class="trigger-content" id="corner-trigger-content">
-            <span>選擇轉角模塊</span>
+        <!-- 直型 -->
+        <div class="insert-panel active" id="ipanel-straight">
+          <div class="custom-select" id="straight-custom-select">
+            <div class="custom-select-trigger" onclick="event.stopPropagation(); toggleSelect('straight')">
+              <div class="trigger-content" id="straight-trigger-content">
+                <span>選擇直型模塊</span>
+              </div>
+            </div>
+            <div class="custom-select-options" id="straight-options-list"></div>
           </div>
+          <select id="straight-select" style="display: none;"></select>
+          <button class="btn" onclick="insertModule('straight')">插入直型模塊</button>
         </div>
-        <div class="custom-select-options" id="corner-options-list"></div>
-      </div>
-      <select id="corner-select" style="display: none;"></select>
-      <button class="btn" onclick="insertModule('corner')">插入轉角模塊</button>
-    </div>
 
-    <hr class="divider">
-
-    <div class="section">
-      <div class="section-title">其他模塊</div>
-      <div class="custom-select" id="other-custom-select">
-        <div class="custom-select-trigger" onclick="event.stopPropagation(); toggleSelect('other')">
-          <div class="trigger-content" id="other-trigger-content">
-            <span>選擇其他模塊</span>
+        <!-- 轉角 -->
+        <div class="insert-panel" id="ipanel-corner">
+          <div class="custom-select" id="corner-custom-select">
+            <div class="custom-select-trigger" onclick="event.stopPropagation(); toggleSelect('corner')">
+              <div class="trigger-content" id="corner-trigger-content">
+                <span>選擇轉角模塊</span>
+              </div>
+            </div>
+            <div class="custom-select-options" id="corner-options-list"></div>
           </div>
+          <select id="corner-select" style="display: none;"></select>
+          <button class="btn" onclick="insertModule('corner')">插入轉角模塊</button>
         </div>
-        <div class="custom-select-options" id="other-options-list"></div>
-      </div>
-      <select id="other-select" style="display: none;"></select>
-      <button class="btn" onclick="insertModule('other')">插入其他模塊</button>
-    </div>
 
-    <hr class="divider">
+        <!-- 其他 -->
+        <div class="insert-panel" id="ipanel-other">
+          <div class="custom-select" id="other-custom-select">
+            <div class="custom-select-trigger" onclick="event.stopPropagation(); toggleSelect('other')">
+              <div class="trigger-content" id="other-trigger-content">
+                <span>選擇其他模塊</span>
+              </div>
+            </div>
+            <div class="custom-select-options" id="other-options-list"></div>
+          </div>
+          <select id="other-select" style="display: none;"></select>
+          <button class="btn" onclick="insertModule('other')">插入其他模塊</button>
+        </div>
 
-    <div class="section">
-      <div class="section-title">訂製直型模塊</div>
-      <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
-        <label style="font-size:12px; color:#555; white-space:nowrap;">寬度 (mm)</label>
-        <input type="number" id="custom-width-input" value="1000" min="100" max="9999" step="10"
-          style="width:80px; padding:5px 7px; border:1.5px solid #888; border-radius:5px; font-size:13px; background:#fff; color:#1a1a1a; outline:none;"
-          onkeydown="if(event.key==='Enter') insertCustomStraightModule()">
-        <span style="font-size:12px; color:#555;">mm</span>
+        <!-- 訂製直型 -->
+        <div class="insert-panel" id="ipanel-custom">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <label style="font-size:12px; color:#555; white-space:nowrap;">寬度 (mm)</label>
+            <input type="number" id="custom-width-input" value="1000" min="100" max="9999" step="10"
+              style="width:80px; padding:5px 7px; border:1.5px solid #888; border-radius:5px; font-size:13px; background:#fff; color:#1a1a1a; outline:none;"
+              onkeydown="if(event.key==='Enter') insertCustomStraightModule()">
+            <span style="font-size:12px; color:#555;">mm</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <label style="font-size:12px; color:#555; white-space:nowrap;">椅背款式</label>
+            <select id="custom-back-type" style="flex:1; padding:5px 7px; border:1.5px solid #888; border-radius:5px; font-size:12px; background:#fff; color:#1a1a1a; outline:none;">
+              <option value="SBS">有椅背 (SBS)</option>
+              <option value="NBS">無椅背 (NBS)</option>
+              <option value="RBS">右扶手 (RBS)</option>
+              <option value="LBS">左扶手 (LBS)</option>
+            </select>
+          </div>
+          <div id="custom-module-preview" style="width:100%; height:60px; border:1.5px dashed #aaa; border-radius:5px; background:#fcfcfc; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+            <svg id="custom-preview-svg" width="100%" height="100%" viewBox="0 0 1000 413" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"></svg>
+          </div>
+          <p class="hint" id="custom-preview-label" style="font-size:11px; color:#777; text-align:center;">寬度：1000mm｜深度：700mm</p>
+          <button class="btn" onclick="insertCustomStraightModule()">插入訂製直型模塊</button>
+        </div>
       </div>
-      <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
-        <label style="font-size:12px; color:#555; white-space:nowrap;">椅背款式</label>
-        <select id="custom-back-type" style="flex:1; padding:5px 7px; border:1.5px solid #888; border-radius:5px; font-size:12px; background:#fff; color:#1a1a1a; outline:none;">
-          <option value="SBS">有椅背 (SBS)</option>
-          <option value="NBS">無椅背 (NBS)</option>
-          <option value="RBS">右扶手 (RBS)</option>
-          <option value="LBS">左扶手 (LBS)</option>
-        </select>
-      </div>
-      <!-- 訂製模塊縮圖預覽 -->
-      <div id="custom-module-preview" style="width:100%; height:60px; border:1.5px dashed #aaa; border-radius:5px; background:#fcfcfc; display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:2px;">
-        <svg id="custom-preview-svg" width="100%" height="100%" viewBox="0 0 1000 413" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"></svg>
-      </div>
-      <p class="hint" id="custom-preview-label" style="margin-bottom:4px; font-size:11px; color:#777; text-align:center;">寬度：1000mm｜深度：700mm</p>
-      <button class="btn" onclick="insertCustomStraightModule()">插入訂製直型模塊</button>
-      <p class="hint">輸入寬度數值（mm），SVG 由左、中、右三段拼接，中段可橫向拉伸。</p>
     </div>
 
     <hr class="divider">
@@ -1475,12 +1544,29 @@ function initSelectData(type) {
   });
 }
 
+/* ── 插入模塊群組收合 ── */
+function toggleInsertGroup() {
+  document.getElementById('insert-group').classList.toggle('open');
+}
+function switchInsertTab(tab) {
+  ['straight','corner','other','custom'].forEach(t => {
+    document.getElementById('itab-' + t).classList.toggle('active', t === tab);
+    document.getElementById('ipanel-' + t).classList.toggle('active', t === tab);
+  });
+}
+
 function toggleSelect(type) {
-  const target = document.getElementById(`${type}-custom-select`);
+  const target = document.getElementById(type + '-custom-select');
   const isOpen = target.classList.contains('open');
   closeAllSelects();
   if (!isOpen) {
     target.classList.add('open');
+    const trigger = target.querySelector('.custom-select-trigger');
+    const options = target.querySelector('.custom-select-options');
+    const rect = trigger.getBoundingClientRect();
+    options.style.left  = rect.left + 'px';
+    options.style.top   = (rect.bottom + 4) + 'px';
+    options.style.width = rect.width + 'px';
   }
 }
 
