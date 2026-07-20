@@ -593,17 +593,17 @@ tr.multi-selected-row td {
     <div class="panel-title">Agora沙發模塊</div>
 
     <div class="section">
-      <div class="section-title">直行模塊</div>
+      <div class="section-title">直型模塊</div>
       <div class="custom-select" id="straight-custom-select">
         <div class="custom-select-trigger" onclick="event.stopPropagation(); toggleSelect('straight')">
           <div class="trigger-content" id="straight-trigger-content">
-            <span>選擇直行模塊</span>
+            <span>選擇直型模塊</span>
           </div>
         </div>
         <div class="custom-select-options" id="straight-options-list"></div>
       </div>
       <select id="straight-select" style="display: none;"></select>
-      <button class="btn" onclick="insertModule('straight')">插入直行模塊</button>
+      <button class="btn" onclick="insertModule('straight')">插入直型模塊</button>
     </div>
 
     <hr class="divider">
@@ -636,6 +636,35 @@ tr.multi-selected-row td {
       </div>
       <select id="other-select" style="display: none;"></select>
       <button class="btn" onclick="insertModule('other')">插入其他模塊</button>
+    </div>
+
+    <hr class="divider">
+
+    <div class="section">
+      <div class="section-title">訂製直型模塊</div>
+      <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+        <label style="font-size:12px; color:#555; white-space:nowrap;">寬度 (mm)</label>
+        <input type="number" id="custom-width-input" value="1000" min="100" max="9999" step="10"
+          style="width:80px; padding:5px 7px; border:1.5px solid #888; border-radius:5px; font-size:13px; background:#fff; color:#1a1a1a; outline:none;"
+          onkeydown="if(event.key==='Enter') insertCustomStraightModule()">
+        <span style="font-size:12px; color:#555;">mm</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+        <label style="font-size:12px; color:#555; white-space:nowrap;">椅背款式</label>
+        <select id="custom-back-type" style="flex:1; padding:5px 7px; border:1.5px solid #888; border-radius:5px; font-size:12px; background:#fff; color:#1a1a1a; outline:none;">
+          <option value="SBS">有椅背 (SBS)</option>
+          <option value="NBS">無椅背 (NBS)</option>
+          <option value="RBS">右扶手 (RBS)</option>
+          <option value="LBS">左扶手 (LBS)</option>
+        </select>
+      </div>
+      <!-- 訂製模塊縮圖預覽 -->
+      <div id="custom-module-preview" style="width:100%; height:60px; border:1.5px dashed #aaa; border-radius:5px; background:#fcfcfc; display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:2px;">
+        <svg id="custom-preview-svg" width="100%" height="100%" viewBox="0 0 1000 413" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <p class="hint" id="custom-preview-label" style="margin-bottom:4px; font-size:11px; color:#777; text-align:center;">寬度：1000mm｜深度：700mm</p>
+      <button class="btn" onclick="insertCustomStraightModule()">插入訂製直型模塊</button>
+      <p class="hint">輸入寬度數值（mm），SVG 由左、中、右三段拼接，中段可橫向拉伸。</p>
     </div>
 
     <hr class="divider">
@@ -1158,7 +1187,7 @@ function initCanvasPan() {
 const MODULE_OUTLINE = (() => {
   const outlines = {};
 
-  // 直行模塊 & 圓形矮凳：矩形包圍盒即可
+  // 直型模塊 & 圓形矮凳：矩形包圍盒即可
   ['SP-17-1TRBS','SP-17-1TLBS','SP-17-1TSBS','SP-17-1TNBS',
    'SP-17-2TRBS','SP-17-2TLBS','SP-17-2TSBS','SP-17-2TNBS',
    'SP-17-1.5TRBS','SP-17-1.5TLBS','SP-17-RPS'].forEach(id => {
@@ -2270,7 +2299,7 @@ function buildAggregatedRows() {
     if (!groups.has(key)) {
       groups.set(key, {
         name:      mod.name,
-        id:        mod.id,
+        id:        mod.isCustom ? '' : mod.id,
         spec:      mod.spec || `${mod.width} × ${mod.height}`,
         backColor: mod.backColor,
         seatColor: mod.seatColor,
@@ -2475,7 +2504,7 @@ function renderTable() {
 
     const tdId = document.createElement('td');
     tdId.style.fontWeight = 'bold';
-    tdId.textContent = mod.id;
+    tdId.textContent = mod.isCustom ? '' : mod.id;
 
     const tdSpec = document.createElement('td');
     tdSpec.textContent = mod.spec || `${mod.width} × ${mod.height}`;
@@ -2690,7 +2719,8 @@ function saveProject() {
       seatLabel:  mod.seatLabel,
       backLabel:  mod.backLabel,
       note:       mod.note,
-      socketQty:  mod.socketQty || 0
+      socketQty:  mod.socketQty || 0,
+      isCustom:   mod.isCustom || false
     }))
   };
 
@@ -2749,6 +2779,15 @@ function loadProject(event) {
 
     // 載入模塊
     data.modules.forEach(saved => {
+      // 訂製模塊：重建 SVG 並存入快取
+      if (saved.isCustom && saved.id && saved.id.startsWith('CUSTOM-STRAIGHT-')) {
+        if (!CUSTOM_SVG[saved.id]) {
+          const parts   = saved.id.split('-'); // ['CUSTOM','STRAIGHT', widthMm, backType]
+          const wMm     = parseInt(parts[2]) || 1000;
+          const bType   = parts[3] || 'SBS';
+          CUSTOM_SVG[saved.id] = buildCustomStraightSVG(wMm, bType);
+        }
+      }
       // 以 uid 為準保留原始識別碼（避免拖曳衝突）
       const mod = {
         uid:       saved.uid,
@@ -2765,7 +2804,8 @@ function loadProject(event) {
         seatLabel: saved.seatLabel || '',
         backLabel: saved.backLabel || '',
         note:      saved.note || '',
-        socketQty: (saved.id === 'SP-17-RPS') ? 0 : (saved.socketQty || 0)
+        socketQty: (saved.id === 'SP-17-RPS') ? 0 : (saved.socketQty || 0),
+        isCustom:  saved.isCustom || false
       };
       modules.push(mod);
       renderModuleDOM(mod);
@@ -2807,7 +2847,7 @@ function exportCSV() {
     modules.forEach(mod => {
       const backLbl  = mod.backColor ? (mod.backLabel  || '') : '';
       const seatLbl  = mod.seatLabel || '';
-      csvContent += `${escCSV(mod.name)},${escCSV(mod.id)},${escCSV(mod.spec || `${mod.width}*${mod.height}`)},${escCSV('1')},${escCSV(backLbl)},${escCSV(seatLbl)},${escCSV(mod.note)}\n`;
+      csvContent += `${escCSV(mod.name)},${escCSV(mod.isCustom ? '' : mod.id)},${escCSV(mod.spec || `${mod.width}*${mod.height}`)},${escCSV('1')},${escCSV(backLbl)},${escCSV(seatLbl)},${escCSV(mod.note)}\n`;
     });
   }
 
@@ -3060,6 +3100,260 @@ function toggleMultiSelectMode() {
     showToast('多選模式已關閉');
   }
 }
+
+// ==========================================
+// 訂製直型模塊
+// ==========================================
+
+/**
+ * 根據寬度與椅背款式，動態產生由左、中、右三段組成的 SVG 字串。
+ *
+ * 座標系：與原始模塊完全一致。
+ *   原始 1T 模塊：width=700mm，SVG viewBox 高度 = 413.386pt
+ *   換算比例：PT_PER_MM = 413.386 / 700 ≈ 0.59055 pt/mm
+ *
+ * 左段 & 右段各固定對應 70mm（≈ 41.34pt），保留圓角與腳位；
+ * 中段對應 (widthMm - 140)mm，兩側直切、可橫向無限拉伸。
+ * 所有路徑全部在同一個 SVG 座標空間繪製，不使用巢狀 SVG。
+ */
+function buildCustomStraightSVG(widthMm, backType) {
+  // ── 座標換算常數（來自原始 1T 模塊：viewBox=413.386, width=700mm）──
+  const PT_PER_MM = 413.386 / 700;   // ≈ 0.59055 pt/mm
+  const mm = v => v * PT_PER_MM;     // mm → pt
+
+  // ── 總 viewBox 尺寸（pt）──
+  const VW = mm(widthMm);            // 總寬（pt）
+  const VH = 413.386;                // 固定高（pt），與原始模塊一致
+
+  // ── 原始模塊的各項固定值（直接取自 1TSBS / 1TRBS SVG）──
+  const R       = 17.717;            // 圓角半徑（pt）
+  const STROKE  = 4.167;             // 外框內縮（pt）
+  const LEG_W   = 11.811;            // 腳位寬（pt）
+  const LEG_H   = 47.244;            // 腳位高（pt）
+  const LEG_Y1  = 64.961;            // 上腳位 Y（pt）
+  const LEG_Y2  = 301.181;           // 下腳位 Y（pt）
+  const BACK_H  = 100.394;           // 椅背高 / 扶手寬（pt）
+
+  // ── 椅背/扶手相關座標 ──
+  const BACK_TOP       = R;                     // 17.717  椅背頂部 Y
+  const BACK_BOT       = R + BACK_H;            // 118.111 椅背底部 Y
+  const BACK_BOT_INNER = R + BACK_H - STROKE;   // 113.944 椅背內框底部 Y
+
+  // ── 扶手右邊界（RBS）：來自 1TRBS 路徑分析
+  // 全寬往下椅背後，l-295.276,0 → 右邊界 X = 413.386-295.276 = 118.111 = R+BACK_H
+  const ARM_RIGHT       = R + BACK_H;           // 118.111 扶手填色右邊界 X
+  const ARM_RIGHT_INNER = R + BACK_H - STROKE;  // 113.944 扶手內框右邊界 X
+
+  const sf = DEFAULT_SEAT_COLOR;
+  const bf = DEFAULT_BACK_COLOR;
+  const sk = '#000000';
+
+  const leg = (x, y) =>
+    `<rect x="${x.toFixed(3)}" y="${y.toFixed(3)}" width="${LEG_W}" height="${LEG_H}" fill="${sk}"/>`;
+
+  // ══════════════════════════════════════════
+  // 坐墊本體（全款共用）
+  // ══════════════════════════════════════════
+  const seat = `<path d="M${R},0 L${(VW-R).toFixed(3)},0 Q${VW.toFixed(3)},0 ${VW.toFixed(3)},${R} L${VW.toFixed(3)},${(VH-R).toFixed(3)} Q${VW.toFixed(3)},${VH} ${(VW-R).toFixed(3)},${VH} L${R},${VH} Q0,${VH} 0,${(VH-R).toFixed(3)} L0,${R} Q0,0 ${R},0 Z" fill="${sf}"/>`;
+
+  // ── 外框線（evenodd 鏤空，全款共用）──
+  const outline = `<path d="M${R},0 L${(VW-R).toFixed(3)},0 Q${VW.toFixed(3)},0 ${VW.toFixed(3)},${R} L${VW.toFixed(3)},${(VH-R).toFixed(3)} Q${VW.toFixed(3)},${VH} ${(VW-R).toFixed(3)},${VH} L${R},${VH} Q0,${VH} 0,${(VH-R).toFixed(3)} L0,${R} Q0,0 ${R},0 Z M${R},${STROKE} Q${STROKE},${STROKE} ${STROKE},${R} L${STROKE},${(VH-R).toFixed(3)} Q${STROKE},${(VH-STROKE).toFixed(3)} ${R},${(VH-STROKE).toFixed(3)} L${(VW-R).toFixed(3)},${(VH-STROKE).toFixed(3)} Q${(VW-STROKE).toFixed(3)},${(VH-STROKE).toFixed(3)} ${(VW-STROKE).toFixed(3)},${(VH-R).toFixed(3)} L${(VW-STROKE).toFixed(3)},${R} Q${(VW-STROKE).toFixed(3)},${STROKE} ${(VW-R).toFixed(3)},${STROKE} Z" fill="${sk}" fill-rule="evenodd"/>`;
+
+  let back = '';
+
+  if (backType === 'SBS') {
+    // ── SBS：全寬橫向椅背 ──
+    back += `<path d="M${VW.toFixed(3)},${BACK_TOP} L${VW.toFixed(3)},${BACK_BOT} L0,${BACK_BOT} L0,${BACK_TOP} Q0,0 ${R},0 L${(VW-R).toFixed(3)},0 Q${VW.toFixed(3)},0 ${VW.toFixed(3)},${BACK_TOP} Z" fill="${bf}"/>`;
+    back += `<path d="M${VW.toFixed(3)},${BACK_TOP} L${VW.toFixed(3)},${BACK_BOT} L0,${BACK_BOT} L0,${BACK_TOP} Q0,0 ${R},0 L${(VW-R).toFixed(3)},0 Q${VW.toFixed(3)},0 ${VW.toFixed(3)},${BACK_TOP} Z M${(VW-STROKE).toFixed(3)},${R} Q${(VW-STROKE).toFixed(3)},${STROKE} ${(VW-R).toFixed(3)},${STROKE} L${R},${STROKE} Q${STROKE},${STROKE} ${STROKE},${R} L${STROKE},${BACK_BOT_INNER} L${(VW-STROKE).toFixed(3)},${BACK_BOT_INNER} Z" fill="${sk}" fill-rule="evenodd"/>`;
+
+  } else if (backType === 'RBS') {
+    // ── RBS：左側垂直扶手 + 頂部椅背（完全對應 1TRBS 的灰色區域）──
+    //
+    // 灰色填色形狀（來自 1TRBS）：
+    //   頂部橫跨全寬（Y: 0 → BACK_BOT）
+    //   + 左側垂直扶手（X: 0 → ARM_RIGHT，Y: BACK_BOT → VH）
+    //   整體為 L 形
+    back += `<path d="M0,${(VH-R).toFixed(3)} Q0,${VH} ${R},${VH} L${ARM_RIGHT.toFixed(3)},${VH} L${ARM_RIGHT.toFixed(3)},${BACK_BOT} L${VW.toFixed(3)},${BACK_BOT} L${VW.toFixed(3)},${BACK_TOP} Q${VW.toFixed(3)},0 ${(VW-R).toFixed(3)},0 L${R},0 Q0,0 0,${R} Z" fill="${bf}"/>`;
+
+    // 外框（evenodd）：
+    //   外框同上面的 L 形填色；
+    //   內框也是 L 形，各邊內縮 STROKE
+    back += `<path d="M0,${(VH-R).toFixed(3)} Q0,${VH} ${R},${VH} L${ARM_RIGHT.toFixed(3)},${VH} L${ARM_RIGHT.toFixed(3)},${BACK_BOT} L${VW.toFixed(3)},${BACK_BOT} L${VW.toFixed(3)},${BACK_TOP} Q${VW.toFixed(3)},0 ${(VW-R).toFixed(3)},0 L${R},0 Q0,0 0,${R} Z M${STROKE},${R} Q${STROKE},${STROKE} ${R},${STROKE} L${(VW-R).toFixed(3)},${STROKE} Q${(VW-STROKE).toFixed(3)},${STROKE} ${(VW-STROKE).toFixed(3)},${R} L${(VW-STROKE).toFixed(3)},${BACK_BOT_INNER} L${ARM_RIGHT_INNER.toFixed(3)},${BACK_BOT_INNER} L${ARM_RIGHT_INNER.toFixed(3)},${(VH-R).toFixed(3)} Q${ARM_RIGHT_INNER.toFixed(3)},${(VH-STROKE).toFixed(3)} ${ARM_RIGHT.toFixed(3)},${(VH-STROKE).toFixed(3)} L${R},${(VH-STROKE).toFixed(3)} Q${STROKE},${(VH-STROKE).toFixed(3)} ${STROKE},${(VH-R).toFixed(3)} Z" fill="${sk}" fill-rule="evenodd"/>`;
+  } else if (backType === 'LBS') {
+    // ── LBS：右側垂直扶手 + 頂部椅背（RBS 鏡像，扶手在右）──
+    // 扶手左邊界 X = VW - (R + BACK_H)
+    const AL  = VW - ARM_RIGHT;        // 扶手填色左邊界 X
+    const ALI = VW - ARM_RIGHT_INNER;  // 扶手內框左邊界 X
+    back += `<path d="M${VW.toFixed(3)},${(VH-R).toFixed(3)} Q${VW.toFixed(3)},${VH} ${(VW-R).toFixed(3)},${VH} L${AL.toFixed(3)},${VH} L${AL.toFixed(3)},${BACK_BOT} L0,${BACK_BOT} L0,${BACK_TOP} Q0,0 ${R},0 L${(VW-R).toFixed(3)},0 Q${VW.toFixed(3)},0 ${VW.toFixed(3)},${BACK_TOP} Z" fill="${bf}"/>`;
+    back += `<path d="M${VW.toFixed(3)},${(VH-R).toFixed(3)} Q${VW.toFixed(3)},${VH} ${(VW-R).toFixed(3)},${VH} L${AL.toFixed(3)},${VH} L${AL.toFixed(3)},${BACK_BOT} L0,${BACK_BOT} L0,${BACK_TOP} Q0,0 ${R},0 L${(VW-R).toFixed(3)},0 Q${VW.toFixed(3)},0 ${VW.toFixed(3)},${BACK_TOP} Z M${(VW-STROKE).toFixed(3)},${R} Q${(VW-STROKE).toFixed(3)},${STROKE} ${(VW-R).toFixed(3)},${STROKE} L${R},${STROKE} Q${STROKE},${STROKE} ${STROKE},${R} L${STROKE},${BACK_BOT_INNER} L${ALI.toFixed(3)},${BACK_BOT_INNER} L${ALI.toFixed(3)},${(VH-R).toFixed(3)} Q${ALI.toFixed(3)},${(VH-STROKE).toFixed(3)} ${AL.toFixed(3)},${(VH-STROKE).toFixed(3)} L${(VW-R).toFixed(3)},${(VH-STROKE).toFixed(3)} Q${(VW-STROKE).toFixed(3)},${(VH-STROKE).toFixed(3)} ${(VW-STROKE).toFixed(3)},${(VH-R).toFixed(3)} Z" fill="${sk}" fill-rule="evenodd"/>`;
+  }
+  // NBS：back 保持空字串
+
+  // ── 腳位（左右各兩個）──
+  const legs =
+    leg(0, LEG_Y1) +
+    leg(0, LEG_Y2) +
+    leg(VW - LEG_W, LEG_Y1) +
+    leg(VW - LEG_W, LEG_Y2);
+
+  // ══════════════════════════════════════════
+  // 組合最終 SVG（單一座標空間，無巢狀）
+  // ══════════════════════════════════════════
+  return `<svg width="100%" height="100%" viewBox="0 0 ${VW.toFixed(3)} ${VH}" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;">
+  ${seat}
+  ${outline}
+  ${back}
+  ${legs}
+</svg>`;
+}
+
+/** 更新面板預覽圖 */
+function updateCustomPreview() {
+  const widthInput = document.getElementById('custom-width-input');
+  const backType   = document.getElementById('custom-back-type').value;
+  const widthMm    = Math.max(200, parseInt(widthInput.value) || 1000);
+
+  const svg = buildCustomStraightSVG(widthMm, backType);
+  const previewContainer = document.getElementById('custom-module-preview');
+  previewContainer.innerHTML = svg;
+
+  document.getElementById('custom-preview-label').textContent =
+    `寬度：${widthMm}mm｜深度：700mm`;
+}
+
+/** 產生訂製模塊的 Blob URL（供 img src 使用） */
+function getCustomModuleBlobUrl(widthMm, backType, seatColor, backColor) {
+  // 先取得原始 SVG（使用 DEFAULT 顏色）
+  let svgString = buildCustomStraightSVG(widthMm, backType);
+
+  // 套用顏色替換（與 getModuleImageUrl 相同機制）
+  const sc = (seatColor || DEFAULT_SEAT_COLOR).toLowerCase();
+  const bc = (backColor || DEFAULT_BACK_COLOR).toLowerCase();
+  const SEAT_PLACEHOLDER = '__SEAT_COLOR__';
+  const BACK_PLACEHOLDER = '__BACK_COLOR__';
+  svgString = svgString.split(DEFAULT_SEAT_COLOR).join(SEAT_PLACEHOLDER);
+  svgString = svgString.split(DEFAULT_BACK_COLOR).join(BACK_PLACEHOLDER);
+  svgString = svgString.split(SEAT_PLACEHOLDER).join(sc);
+  svgString = svgString.split(BACK_PLACEHOLDER).join(bc);
+
+  const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+  return URL.createObjectURL(blob);
+}
+
+/** 插入訂製直型模塊到畫布 */
+function insertCustomStraightModule() {
+  const widthInput = document.getElementById('custom-width-input');
+  const backType   = document.getElementById('custom-back-type').value;
+  const widthMm    = Math.max(200, Math.min(9999, parseInt(widthInput.value) || 1000));
+  const depthMm    = 700;
+
+  // ── 若寬度符合既有規格尺寸，自動改為對應的標準模塊 ──
+  // 鍵值：`${widthMm}-${backType}`，對應公版料號
+  const STANDARD_WIDTH_MAP = {
+    '700-RBS':  'SP-17-1TRBS',   // 單人有椅背右扶手
+    '700-LBS':  'SP-17-1TLBS',   // 單人有椅背左扶手
+    '700-SBS':  'SP-17-1TSBS',   // 單人直型椅背
+    '700-NBS':  'SP-17-1TNBS',   // 單人無椅背
+    '1400-RBS': 'SP-17-2TRBS',   // 雙人有椅背右扶手
+    '1400-LBS': 'SP-17-2TLBS',   // 雙人有椅背左扶手
+    '1400-SBS': 'SP-17-2TSBS',   // 雙人直型椅背
+    '1400-NBS': 'SP-17-2TNBS',   // 雙人無椅背
+  };
+  const mapKey = `${widthMm}-${backType}`;
+  if (STANDARD_WIDTH_MAP[mapKey]) {
+    const targetId  = STANDARD_WIDTH_MAP[mapKey];
+    const allModels = SOFA_MODELS['straight'] || [];
+    const model     = allModels.find(m => m.id === targetId);
+    if (model) {
+      const canvasEl = document.getElementById('canvas');
+      const cx = (canvasEl.clientWidth  / 2 - panX) / canvasZoom;
+      const cy = (canvasEl.clientHeight / 2 - panY) / canvasZoom;
+      const wPx = model.width  * SCALE;
+      const hPx = model.height * SCALE;
+      const uid = Date.now() + Math.floor(Math.random() * 1000);
+      const svgMarkup = CUSTOM_SVG[model.id] || '';
+      const hasBackColorBlock = svgMarkup.toLowerCase().includes(DEFAULT_BACK_COLOR);
+      const newModule = {
+        uid:       uid,
+        id:        model.id,
+        name:      model.name,
+        width:     model.width,
+        height:    model.height,
+        spec:      model.spec,
+        x:         cx - wPx / 2,
+        y:         cy - hPx / 2,
+        rotate:    0,
+        note:      '',
+        seatColor: DEFAULT_SEAT_COLOR,
+        backColor: hasBackColorBlock ? DEFAULT_BACK_COLOR : '',
+        backLabel: '',
+        seatLabel: '',
+        socketQty: 0
+      };
+      modules.push(newModule);
+      renderModuleDOM(newModule);
+      renderTable();
+      selectModule(uid);
+      updateEmptyHint();
+      showToast(`寬度 ${widthMm}mm 符合規格，已自動插入${model.name}（${model.id}）`);
+      return;
+    }
+  }
+  // ── 以下為一般訂製模塊流程 ──
+
+  const uid = Date.now() + Math.floor(Math.random() * 1000);
+  const canvasEl = document.getElementById('canvas');
+  const cx = (canvasEl.clientWidth  / 2 - panX) / canvasZoom;
+  const cy = (canvasEl.clientHeight / 2 - panY) / canvasZoom;
+  const wPx = widthMm * SCALE;
+  const hPx = depthMm * SCALE;
+
+  const hasSeatback = backType === 'SBS';
+  const hasArmrest  = backType === 'RBS' || backType === 'LBS';
+  const modelId   = `CUSTOM-STRAIGHT-${widthMm}-${backType}`;
+  const modelName = backType === 'RBS' ? '訂製直型沙發有椅背右扶手'
+                  : backType === 'LBS' ? '訂製直型沙發有椅背左扶手'
+                  : hasSeatback ? '訂製直型沙發有椅背'
+                  : '訂製直型沙發無椅背';
+
+  // 將 SVG 存入 CUSTOM_SVG 快取（讓 getModuleImageUrl 可取得）
+  CUSTOM_SVG[modelId] = buildCustomStraightSVG(widthMm, backType);
+
+  const newModule = {
+    uid:       uid,
+    id:        modelId,
+    name:      modelName,
+    width:     widthMm,
+    height:    depthMm,
+    spec:      `${widthMm}*${depthMm}*${(hasSeatback || hasArmrest) ? 750 : 430}`,
+    x:         cx - wPx / 2,
+    y:         cy - hPx / 2,
+    rotate:    0,
+    note:      '',
+    seatColor: DEFAULT_SEAT_COLOR,
+    backColor: (hasSeatback || hasArmrest) ? DEFAULT_BACK_COLOR : '',
+    backLabel: '',
+    seatLabel: '',
+    socketQty: 0,
+    isCustom:  true
+  };
+
+  modules.push(newModule);
+  renderModuleDOM(newModule);
+  renderTable();
+  selectModule(uid);
+  updateEmptyHint();
+  showToast(`已插入訂製直型模塊 ${widthMm}mm`);
+}
+
+// ─── 頁面載入後初始化訂製模塊面板 ───
+document.addEventListener('DOMContentLoaded', () => {
+  const widthInput  = document.getElementById('custom-width-input');
+  const backSelect  = document.getElementById('custom-back-type');
+  widthInput.addEventListener('input',  updateCustomPreview);
+  backSelect.addEventListener('change', updateCustomPreview);
+  updateCustomPreview(); // 初始預覽
+});
 
 // ==========================================
 // 任務二：Panel 抽屜開關（小螢幕專用）
