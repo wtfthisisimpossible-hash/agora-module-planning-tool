@@ -1616,23 +1616,21 @@ function getSelectedModel(type) {
 // ==========================================
 // 3. 畫布核心控制
 // ==========================================
-function insertModule(type) {
-  const model = getSelectedModel(type);
-  if (!model) return;
-
+/**
+ * 共用定位邏輯：
+ * 若畫布已有模塊，新模塊貼近模塊群右側 20px 插入（垂直與群組中心對齊）；
+ * 否則置於視窗中心。
+ * @param {number} wPx 新模塊寬度（px）
+ * @param {number} hPx 新模塊高度（px）
+ * @returns {{ cx: number, cy: number }} 新模塊中心點（canvas 座標）
+ */
+function findInsertPosition(wPx, hPx) {
   const canvasEl = document.getElementById('canvas');
-  const wPx = model.width * SCALE;
-  const hPx = model.height * SCALE;
-
-  // 若已有模塊，貼近現有模塊群右側 20px 插入；否則置於視窗中心
-  let cx, cy;
   if (modules.length > 0) {
-    // 計算所有現有模塊的包圍盒（canvas 座標，未套用旋轉，取保守近似）
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     modules.forEach(m => {
       const mw = m.width * SCALE;
       const mh = m.height * SCALE;
-      // 旋轉包圍盒估算：以中心為基準取斜邊長作為保守半徑
       const halfDiag = Math.sqrt(mw * mw + mh * mh) / 2;
       const mc = { x: m.x + mw / 2, y: m.y + mh / 2 };
       minX = Math.min(minX, mc.x - halfDiag);
@@ -1641,19 +1639,31 @@ function insertModule(type) {
       maxY = Math.max(maxY, mc.y + halfDiag);
     });
     const groupCenterY = (minY + maxY) / 2;
-    // 視窗可見範圍（canvas 座標）
     const viewLeft   = -panX / canvasZoom;
     const viewRight  = (canvasEl.clientWidth  - panX) / canvasZoom;
     const viewTop    = -panY / canvasZoom;
     const viewBottom = (canvasEl.clientHeight - panY) / canvasZoom;
-    // 新模塊 X：緊貼模塊群右側 + 20px；若超出可見區則鉗制在視窗右邊界內
-    cx = Math.min(maxX + 20 + wPx / 2, viewRight - wPx / 2);
-    // 新模塊 Y：與模塊群垂直中心對齊；若超出可見區則鉗制
-    cy = Math.max(viewTop + hPx / 2, Math.min(groupCenterY, viewBottom - hPx / 2));
+    const cx = Math.min(maxX + 20 + wPx / 2, viewRight - wPx / 2);
+    const cy = Math.max(viewTop + hPx / 2, Math.min(groupCenterY, viewBottom - hPx / 2));
+    return { cx, cy };
   } else {
-    cx = (canvasEl.clientWidth  / 2 - panX) / canvasZoom;
-    cy = (canvasEl.clientHeight / 2 - panY) / canvasZoom;
+    const canvasEl = document.getElementById('canvas');
+    return {
+      cx: (canvasEl.clientWidth  / 2 - panX) / canvasZoom,
+      cy: (canvasEl.clientHeight / 2 - panY) / canvasZoom
+    };
   }
+}
+
+function insertModule(type) {
+  const model = getSelectedModel(type);
+  if (!model) return;
+
+  const wPx = model.width * SCALE;
+  const hPx = model.height * SCALE;
+
+  // 若已有模塊，貼近現有模塊群右側 20px 插入；否則置於視窗中心
+  let { cx, cy } = findInsertPosition(wPx, hPx);
 
   const uid = Date.now() + Math.floor(Math.random() * 1000);
 
@@ -3384,11 +3394,9 @@ function insertCustomStraightModule() {
     const allModels = SOFA_MODELS['straight'] || [];
     const model     = allModels.find(m => m.id === targetId);
     if (model) {
-      const canvasEl = document.getElementById('canvas');
-      const cx = (canvasEl.clientWidth  / 2 - panX) / canvasZoom;
-      const cy = (canvasEl.clientHeight / 2 - panY) / canvasZoom;
       const wPx = model.width  * SCALE;
       const hPx = model.height * SCALE;
+      const { cx, cy } = findInsertPosition(wPx, hPx);
       const uid = Date.now() + Math.floor(Math.random() * 1000);
       const svgMarkup = CUSTOM_SVG[model.id] || '';
       const hasBackColorBlock = svgMarkup.toLowerCase().includes(DEFAULT_BACK_COLOR);
@@ -3421,11 +3429,9 @@ function insertCustomStraightModule() {
   // ── 以下為一般訂製模塊流程 ──
 
   const uid = Date.now() + Math.floor(Math.random() * 1000);
-  const canvasEl = document.getElementById('canvas');
-  const cx = (canvasEl.clientWidth  / 2 - panX) / canvasZoom;
-  const cy = (canvasEl.clientHeight / 2 - panY) / canvasZoom;
   const wPx = widthMm * SCALE;
   const hPx = depthMm * SCALE;
+  const { cx, cy } = findInsertPosition(wPx, hPx);
 
   const hasSeatback = backType === 'SBS';
   const hasArmrest  = backType === 'RBS' || backType === 'LBS';
