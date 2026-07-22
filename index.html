@@ -999,7 +999,7 @@ function getModuleImageUrl(modelId, seatColor, backColor) {
 // 比例尺：1mm = 0.1px
 const SCALE = 0.1;
 // 吸附閾值（邏輯像素）
-const SNAP_THRESHOLD = 3;
+const SNAP_THRESHOLD = 10;
 // 切線對齊最大允許偏移量（邏輯像素）：超過此值不強制對齊，避免遠距拉扯
 const TANGENT_SNAP_THRESHOLD = 40;
 const ZOOM_MIN = 0.3;
@@ -1621,11 +1621,39 @@ function insertModule(type) {
   if (!model) return;
 
   const canvasEl = document.getElementById('canvas');
-  const cx = (canvasEl.clientWidth / 2 - panX) / canvasZoom;
-  const cy = (canvasEl.clientHeight / 2 - panY) / canvasZoom;
-
   const wPx = model.width * SCALE;
   const hPx = model.height * SCALE;
+
+  // 若已有模塊，貼近現有模塊群右側 20px 插入；否則置於視窗中心
+  let cx, cy;
+  if (modules.length > 0) {
+    // 計算所有現有模塊的包圍盒（canvas 座標，未套用旋轉，取保守近似）
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    modules.forEach(m => {
+      const mw = m.width * SCALE;
+      const mh = m.height * SCALE;
+      // 旋轉包圍盒估算：以中心為基準取斜邊長作為保守半徑
+      const halfDiag = Math.sqrt(mw * mw + mh * mh) / 2;
+      const mc = { x: m.x + mw / 2, y: m.y + mh / 2 };
+      minX = Math.min(minX, mc.x - halfDiag);
+      minY = Math.min(minY, mc.y - halfDiag);
+      maxX = Math.max(maxX, mc.x + halfDiag);
+      maxY = Math.max(maxY, mc.y + halfDiag);
+    });
+    const groupCenterY = (minY + maxY) / 2;
+    // 視窗可見範圍（canvas 座標）
+    const viewLeft   = -panX / canvasZoom;
+    const viewRight  = (canvasEl.clientWidth  - panX) / canvasZoom;
+    const viewTop    = -panY / canvasZoom;
+    const viewBottom = (canvasEl.clientHeight - panY) / canvasZoom;
+    // 新模塊 X：緊貼模塊群右側 + 20px；若超出可見區則鉗制在視窗右邊界內
+    cx = Math.min(maxX + 20 + wPx / 2, viewRight - wPx / 2);
+    // 新模塊 Y：與模塊群垂直中心對齊；若超出可見區則鉗制
+    cy = Math.max(viewTop + hPx / 2, Math.min(groupCenterY, viewBottom - hPx / 2));
+  } else {
+    cx = (canvasEl.clientWidth  / 2 - panX) / canvasZoom;
+    cy = (canvasEl.clientHeight / 2 - panY) / canvasZoom;
+  }
 
   const uid = Date.now() + Math.floor(Math.random() * 1000);
 
