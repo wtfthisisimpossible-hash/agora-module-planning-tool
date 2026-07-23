@@ -759,9 +759,12 @@ tr.multi-selected-row td {
     <hr class="divider">
 
     <div class="section">
-      <div class="section-title">複製選取模塊</div>
-      <button class="btn" onclick="duplicateSelected()" title="快捷鍵：Ctrl+D">⧉ 複製選取模塊</button>
-      <p class="hint">複製目前選取的模塊（含顏色、備註），以群組方式貼至畫布空白處。快捷鍵：Ctrl+D</p>
+      <div class="section-title">複製 ／ 刪除選取模塊</div>
+      <div class="btn-row">
+        <button class="btn" onclick="duplicateSelected()" title="快捷鍵：Ctrl+D">⧉ 複製選取</button>
+        <button class="btn btn-danger" onclick="deleteSelected()">✕ 刪除選取</button>
+      </div>
+      <p class="hint">複製：含顏色、備註，貼至空白處（Ctrl+D）<br>刪除：移除目前選取的模塊（del/⌫）</p>
     </div>
 
     <hr class="divider">
@@ -775,7 +778,6 @@ tr.multi-selected-row td {
     <hr class="divider">
 
     <div class="section">
-      <button class="btn btn-danger" onclick="deleteSelected()">刪除選取模塊</button>
       <button class="btn btn-danger" onclick="clearCanvas()">清空配置</button>
     </div>
   </div>
@@ -3148,9 +3150,16 @@ function duplicateSelected() {
     if (mod.y + hPx > maxY) maxY = mod.y + hPx;
   });
 
-  // 偏移量：bounding box 右邊 + 20px 間距
-  const offsetX = (maxX - minX) + 20 / canvasZoom;
-  const offsetY = 0;
+  // 用 findInsertPosition 取得群組插入中心點（確保落在畫布可見區域）
+  const groupW = maxX - minX;
+  const groupH = maxY - minY;
+  const { cx: insertCx, cy: insertCy } = findInsertPosition(groupW, groupH);
+
+  // 群組原中心 → 計算偏移量
+  const origCx = minX + groupW / 2;
+  const origCy = minY + groupH / 2;
+  const offsetX = insertCx - origCx;
+  const offsetY = insertCy - origCy;
 
   // 先清除目前選取狀態
   if (selectedUid !== null) {
