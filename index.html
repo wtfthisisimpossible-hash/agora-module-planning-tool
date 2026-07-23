@@ -2610,9 +2610,25 @@ function appendHslPicker(popup, mod, key) {
   eyeBtn.appendChild(eyeIcon);
 
   const supportsEyeDropper = typeof EyeDropper !== 'undefined';
-  if (!supportsEyeDropper) {
+  // 偵測是否為行動裝置（觸控螢幕）
+  const isMobileDevice = () => window.matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (!supportsEyeDropper || isMobileDevice()) {
     eyeBtn.disabled = true;
-    eyeBtn.title = '您的瀏覽器不支援吸管功能（需 Chrome / Edge 95+）';
+    eyeBtn.title = isMobileDevice() ? '滴管工具目前限PC使用' : '您的瀏覽器不支援吸管功能（需 Chrome / Edge 95+）';
+    // 用 wrapper 攔截點擊，因為 disabled 按鈕不觸發 click
+    const eyeBtnWrapper = document.createElement('span');
+    eyeBtnWrapper.style.cssText = 'position:relative;display:inline-flex;flex-shrink:0;';
+    const eyeOverlay = document.createElement('span');
+    eyeOverlay.style.cssText = 'position:absolute;inset:0;cursor:not-allowed;z-index:1;';
+    eyeOverlay.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showToast('滴管工具目前限PC使用');
+    });
+    // eyeBtn 先插入 wrapper，overlay 疊在上面
+    eyeBtnWrapper.appendChild(eyeBtn);
+    eyeBtnWrapper.appendChild(eyeOverlay);
+    // 回傳 wrapper 供後續 append 使用（需覆寫 eyeBtn 引用）
+    eyeBtn._wrapper = eyeBtnWrapper;
   } else {
     eyeBtn.title = '從畫面吸取顏色';
     eyeBtn.addEventListener('click', async (e) => {
@@ -2652,7 +2668,7 @@ function appendHslPicker(popup, mod, key) {
     if (btn) btn.style.background = hex;
   });
 
-  previewRow.appendChild(eyeBtn);
+  previewRow.appendChild(eyeBtn._wrapper || eyeBtn);
   previewRow.appendChild(swatch);
   previewRow.appendChild(valueLabel);
   previewRow.appendChild(applyBtn);
