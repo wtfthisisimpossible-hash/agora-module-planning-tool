@@ -665,6 +665,18 @@ td:not(:last-child), th:not(:last-child) { border-right: 1px solid #ddd; }
   outline-offset: 1px;
 }
 
+/* ── 訂製模塊寬度標註 ── */
+.dim-annotation {
+  position: absolute;
+  pointer-events: none;
+  z-index: 20;
+  white-space: nowrap;
+}
+.dim-annotation svg {
+  display: block;
+  overflow: visible;
+}
+
 /* 框選矩形樣式 */
 #selection-rect {
   position: absolute;
@@ -1871,6 +1883,77 @@ function insertModule(type) {
   showToast(`已插入 ${model.id}`);
 }
 
+// ==========================================
+// 訂製模塊寬度標註
+// ==========================================
+
+/**
+ * 在模塊 div 內部建立寬度標註子元素。
+ * 標註以 position:absolute 置於模塊上方，天然跟隨模塊旋轉，
+ * 不需要額外的位置同步。
+ */
+function createDimAnnotation(mod) {
+  if (!mod.isCustom) return;
+  const modDiv = document.getElementById(`mod-${mod.uid}`);
+  if (!modDiv) return;
+
+  const el = document.createElement('div');
+  el.className = 'dim-annotation';
+  el.id = `dim-${mod.uid}`;
+  modDiv.appendChild(el);
+  updateDimAnnotation(mod);
+}
+
+/**
+ * 更新訂製模塊寬度標註的 SVG 內容。
+ * 標註定位由 CSS 控制（top: -22px; left: 0），不需要手動設定座標。
+ */
+function updateDimAnnotation(mod) {
+  if (!mod.isCustom) return;
+  const el = document.getElementById(`dim-${mod.uid}`);
+  if (!el) return;
+
+  const wPx   = mod.width * SCALE;  // 模塊寬度（px）
+  const ARROW = 6;                   // 箭頭長度（px）
+  const svgH  = 22;                  // SVG 高度（標註線距模塊頂端空間）
+  const y     = svgH - 5;           // 量測線的 y 座標
+  const label = `${mod.width}`;
+
+  // 定位：緊貼模塊頂端向上，寬度與模塊一致
+  el.style.width  = `${wPx}px`;
+  el.style.height = `${svgH}px`;
+  el.style.top    = `-${svgH + 5}px`;
+  el.style.left   = '0px';
+
+  el.innerHTML = `
+<svg width="${wPx}" height="${svgH}" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+  <!-- 左箭頭 -->
+  <line x1="${ARROW}" y1="${y - ARROW/2}" x2="0" y2="${y}" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="${ARROW}" y1="${y + ARROW/2}" x2="0" y2="${y}" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- 主橫線（中央留空給數字） -->
+  <line x1="0" y1="${y}" x2="${wPx/2 - 22}" y2="${y}" stroke="#333" stroke-width="1" stroke-linecap="round"/>
+  <line x1="${wPx/2 + 22}" y1="${y}" x2="${wPx}" y2="${y}" stroke="#333" stroke-width="1" stroke-linecap="round"/>
+  <!-- 右箭頭 -->
+  <line x1="${wPx - ARROW}" y1="${y - ARROW/2}" x2="${wPx}" y2="${y}" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="${wPx - ARROW}" y1="${y + ARROW/2}" x2="${wPx}" y2="${y}" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- 數字標籤（白底描邊增加可讀性） -->
+  <text x="${wPx/2}" y="${y + 4}" text-anchor="middle"
+        font-family="Microsoft JhengHei, PingFang TC, sans-serif"
+        font-size="11" font-weight="bold" fill="#333"
+        paint-order="stroke" stroke="white" stroke-width="3" stroke-linejoin="round">
+    ${label}
+  </text>
+</svg>`;
+}
+
+/**
+ * 移除指定 uid 的寬度標註元素。
+ */
+function removeDimAnnotation(uid) {
+  const el = document.getElementById(`dim-${uid}`);
+  if (el) el.remove();
+}
+
 function renderModuleDOM(mod) {
   const viewport = document.getElementById('canvas-viewport');
   const div = document.createElement('div');
@@ -1928,6 +2011,9 @@ function renderModuleDOM(mod) {
   }
 
   viewport.appendChild(div);
+
+  // 若為訂製模塊，建立寬度標註
+  if (mod.isCustom) createDimAnnotation(mod);
 }
 
 /**
@@ -1953,6 +2039,7 @@ function updateModuleDOMPosition(mod) {
     div.style.top = `${mod.y}px`;
     div.style.transform = `rotate(${mod.rotate}deg)`;
   }
+
 }
 
 function selectModule(uid) {
@@ -2419,6 +2506,7 @@ function deleteSelected() {
     selectedUids.forEach(uid => {
       const div = document.getElementById(`mod-${uid}`);
       if (div) div.remove();
+      removeDimAnnotation(uid);
     });
     modules = modules.filter(m => !selectedUids.has(m.uid));
     clearMultiSelection();
@@ -2434,6 +2522,7 @@ function deleteSelected() {
   }
   const div = document.getElementById(`mod-${selectedUid}`);
   if (div) div.remove();
+  removeDimAnnotation(selectedUid);
 
   modules = modules.filter(m => m.uid !== selectedUid);
   selectedUid = null;
@@ -2449,6 +2538,7 @@ function clearCanvas() {
     modules.forEach(mod => {
       const div = document.getElementById(`mod-${mod.uid}`);
       if (div) div.remove();
+      removeDimAnnotation(mod.uid);
     });
     modules = [];
     selectedUid = null;
@@ -3340,6 +3430,7 @@ function loadProject(event) {
     modules.forEach(mod => {
       const div = document.getElementById(`mod-${mod.uid}`);
       if (div) div.remove();
+      removeDimAnnotation(mod.uid);
     });
     modules = [];
     selectedUid = null;
