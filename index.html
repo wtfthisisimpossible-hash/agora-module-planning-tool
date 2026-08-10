@@ -3104,12 +3104,20 @@ function buildAggregatedRows() {
     g.uids.push(mod.uid);
   });
 
-  // 決定每個群組的顯示 note：若群組內有加購插座組，附加標記
+  // 決定每個群組的顯示 note：將布號前置，再附加插座標記
   const result = Array.from(groups.values());
   result.forEach(g => {
+    // 將椅背布號、坐墊布號組成前綴，放入 note 欄位
+    const fabricParts = [];
+    if (g.backColor && g.backLabel) fabricParts.push(`椅背布號:${g.backLabel}`);
+    if (g.seatLabel)                fabricParts.push(`坐墊布號:${g.seatLabel}`);
+    const fabricPrefix = fabricParts.length > 0 ? fabricParts.join(' / ') : '';
+
+    // 組合：布號前綴獨立一行 + 用戶原始備註 + 插座標記
+    const baseNote = [fabricPrefix, g.cleanNote].filter(Boolean).join('\n');
     g.note = g.socketQtyTotal > 0
-      ? (g.cleanNote ? g.cleanNote + SOCKET_NOTE_SEPARATOR : SOCKET_NOTE_SEPARATOR.trim())
-      : g.cleanNote;
+      ? (baseNote ? baseNote + SOCKET_NOTE_SEPARATOR : SOCKET_NOTE_SEPARATOR.trim())
+      : baseNote;
   });
   return result;
 }
@@ -3154,46 +3162,16 @@ function renderTable() {
       tdQty.style.fontWeight = 'bold';
       tdQty.textContent = g.qty;
 
+      // 彙整模式：椅背/坐墊顏色欄顯示空白（布號已移入「註記」欄位）
       const tdBackColor = document.createElement('td');
-      tdBackColor.className = 'color-cell';
-      const backInner = document.createElement('div');
-      backInner.style.display = 'flex';
-      backInner.style.alignItems = 'center';
-      backInner.style.gap = '5px';
-      tdBackColor.appendChild(backInner);
-      const backDot = document.createElement('div');
-      backDot.className = 'color-swatch-btn';
-      backDot.style.background = g.backColor;
-      if (!g.backColor) { backDot.classList.add('no-color'); }
-      backDot.style.pointerEvents = 'none';
-      backDot.title = '椅背顏色';
-      backInner.appendChild(backDot);
-      if (g.backColor && g.backLabel) {
-        const lbl = document.createElement('span');
-        lbl.className = 'fabric-label-text';
-        lbl.textContent = g.backLabel;
-        backInner.appendChild(lbl);
-      }
+      tdBackColor.style.color = '#bbb';
+      tdBackColor.style.textAlign = 'center';
+      tdBackColor.textContent = '—';
 
       const tdSeatColor = document.createElement('td');
-      tdSeatColor.className = 'color-cell';
-      const seatInner = document.createElement('div');
-      seatInner.style.display = 'flex';
-      seatInner.style.alignItems = 'center';
-      seatInner.style.gap = '5px';
-      tdSeatColor.appendChild(seatInner);
-      const seatDot = document.createElement('div');
-      seatDot.className = 'color-swatch-btn';
-      seatDot.style.background = g.seatColor;
-      seatDot.style.pointerEvents = 'none';
-      seatDot.title = '坐墊顏色';
-      seatInner.appendChild(seatDot);
-      if (g.seatLabel) {
-        const lbl = document.createElement('span');
-        lbl.className = 'fabric-label-text';
-        lbl.textContent = g.seatLabel;
-        seatInner.appendChild(lbl);
-      }
+      tdSeatColor.style.color = '#bbb';
+      tdSeatColor.style.textAlign = 'center';
+      tdSeatColor.textContent = '—';
 
       // 彙整模式：加購插座組已獨立為底部品項，此欄留空
       const tdSocket = document.createElement('td');
@@ -3203,6 +3181,7 @@ function renderTable() {
 
       const tdNote = document.createElement('td');
       tdNote.className = 'note-cell';
+      tdNote.style.whiteSpace = 'pre-line';
       tdNote.textContent = g.note;
 
       tr.appendChild(tdName);
@@ -3650,24 +3629,25 @@ function exportCSV() {
     return;
   }
 
-  let csvContent = "\uFEFF";
-  csvContent += "模塊名稱,型號,規格(mm),數量,椅背布號,坐墊布號,註記\n";
-
   const escCSV = (s) => `"${(s || '').replace(/"/g, '""')}"`;
 
+  let csvContent = "\uFEFF";
+
   if (isAggregated) {
+    // 彙整模式：移除椅背布號/坐墊布號欄，布號內容已併入「註記」欄
+    csvContent += "模塊名稱,型號,規格(mm),數量,註記\n";
     const rows = buildAggregatedRows();
     rows.forEach(g => {
-      const backLbl = g.backColor ? (g.backLabel || '') : '';
-      const seatLbl = g.seatLabel || '';
-      csvContent += `${escCSV(g.name)},${escCSV(g.id)},${escCSV(g.spec)},${escCSV(String(g.qty))},${escCSV(backLbl)},${escCSV(seatLbl)},${escCSV(g.note)}\n`;
+      csvContent += `${escCSV(g.name)},${escCSV(g.id)},${escCSV(g.spec)},${escCSV(String(g.qty))},${escCSV(g.note)}\n`;
     });
     // 加購插座組獨立品項
     const totalSocketQty = modules.reduce((sum, m) => sum + (m.socketQty || 0), 0);
     if (totalSocketQty > 0) {
-      csvContent += `${escCSV('加購插座組')},${escCSV('SP-17-A01')},"","${totalSocketQty}","","",""\n`;
+      csvContent += `${escCSV('加購插座組')},${escCSV('SP-17-A01')},"","${totalSocketQty}",""\n`;
     }
   } else {
+    // 明細模式：保留完整欄位
+    csvContent += "模塊名稱,型號,規格(mm),數量,椅背布號,坐墊布號,註記\n";
     modules.forEach(mod => {
       const backLbl  = mod.backColor ? (mod.backLabel  || '') : '';
       const seatLbl  = mod.seatLabel || '';
