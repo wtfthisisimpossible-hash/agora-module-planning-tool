@@ -3716,8 +3716,8 @@ function captureCanvas() {
   const ctx = exportCanvas.getContext('2d');
   ctx.scale(DPR, DPR);
 
-  // 4. 填滿背景色
-  ctx.fillStyle = '#fcfcfc';
+  // 4. 填滿背景色（對應畫布 --surface: #FFFFFF）
+  ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, cropW, cropH);
 
   // 5. 繪製網格（對齊世界座標網格，平移至擷圖原點）
@@ -3728,11 +3728,12 @@ function captureCanvas() {
   const gridStartX = Math.floor(cropX / step200) * step200;
   const gridStartY = Math.floor(cropY / step200) * step200;
 
-  ctx.fillStyle = '#ccc';
+  // 小點：對應 CSS radial-gradient #E0DDD9 1.2px，間距 20px
+  ctx.fillStyle = '#E0DDD9';
   for (let wx = gridStartX; wx <= cropX + cropW; wx += step200) {
     for (let wy = gridStartY; wy <= cropY + cropH; wy += step200) {
       ctx.beginPath();
-      ctx.arc(wx - cropX, wy - cropY, 1.5, 0, Math.PI * 2);
+      ctx.arc(wx - cropX, wy - cropY, 1.2, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -3740,11 +3741,12 @@ function captureCanvas() {
   const gridStart1000X = Math.floor(cropX / step1000) * step1000;
   const gridStart1000Y = Math.floor(cropY / step1000) * step1000;
 
-  ctx.fillStyle = '#5d5d5d';
+  // 大點：對應 CSS radial-gradient #C8C4BF 1.8px，間距 100px（覆蓋在小點上方）
+  ctx.fillStyle = '#C8C4BF';
   for (let wx = gridStart1000X; wx <= cropX + cropW; wx += step1000) {
     for (let wy = gridStart1000Y; wy <= cropY + cropH; wy += step1000) {
       ctx.beginPath();
-      ctx.arc(wx - cropX, wy - cropY, 2, 0, Math.PI * 2);
+      ctx.arc(wx - cropX, wy - cropY, 1.8, 0, Math.PI * 2);
       ctx.fill();
     }
   }
