@@ -380,13 +380,14 @@ body { font-family: "Inter", "Microsoft JhengHei", "PingFang TC", sans-serif; fo
 .list-header span { font-size: 12px; font-weight: 600; color: var(--text-primary); }
 
 table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
-col.col-name   { width: 15%; }
-col.col-id     { width: 14%; }
-col.col-spec   { width: 12%; }
-col.col-qty    { width: 6%; }
-col.col-color  { width: 12%; }
-col.col-socket { width: 8%; }
-col.col-note   { width: 18%; }
+col.col-name      { width: 13%; }
+col.col-id        { width: 12%; }
+col.col-spec      { width: 11%; }
+col.col-qty       { width: 5%; }
+col.col-color     { width: 10%; }
+col.col-socket    { width: 7%; }
+col.col-partition { width: 16%; }
+col.col-note      { width: 16%; }
 
 th {
   background: var(--surface-2);
@@ -694,6 +695,47 @@ td:not(:last-child), th:not(:last-child) { border-right: 1px solid var(--border)
   white-space: nowrap;
   vertical-align: middle;
   margin-left: 3px;
+}
+
+/* 屏風欄位 */
+.partition-cell {
+  vertical-align: top;
+  padding: 4px 6px;
+}
+.partition-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+.partition-checkbox-row input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: #FFCE1B;
+}
+.partition-checkbox-row label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.partition-colors-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+}
+.partition-color-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.partition-color-row .partition-color-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  min-width: 30px;
 }
 
 /* 模塊樣式：完美相容 html2canvas 與拖拽效果 */
@@ -1136,6 +1178,7 @@ tr.multi-selected-row td {
           <col class="col-color">
           <col class="col-color">
           <col class="col-socket">
+          <col class="col-partition">
           <col class="col-note">
         </colgroup>
         <thead>
@@ -1147,6 +1190,7 @@ tr.multi-selected-row td {
             <th>椅背顏色</th>
             <th>坐墊顏色</th>
             <th>加購插座組</th>
+            <th>屏風</th>
             <th>註記</th>
           </tr>
         </thead>
@@ -1232,7 +1276,66 @@ const CUSTOM_SVG = {
   "SP-17-ST": `<svg width="100%" height="100%" viewBox="0 0 178 414" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><g transform="matrix(1,0,0,1,-3895,0)"><g id="画板25" transform="matrix(0.857143,0,0,1,556.050619,0)"><rect x="3895.441" y="0" width="206.693" height="413.386" style="fill:none;"/><clipPath id="_clip1"><rect x="3895.441" y="0" width="206.693" height="413.386"/></clipPath><g clip-path="url(#_clip1)"><g transform="matrix(1.130315,0,0,1.70894,-534.073114,-58.634944)"><path d="M4101.693,44.678L4101.693,265.84C4101.693,271.562 4093.499,276.207 4083.407,276.207L3937.116,276.207C3927.024,276.207 3918.83,271.562 3918.83,265.84L3918.83,44.678C3918.83,38.956 3927.024,34.311 3937.116,34.311L4083.407,34.311C4093.499,34.311 4101.693,38.956 4101.693,44.678Z" style="fill:#f2af0d;"/><path d="M4101.693,44.678L4101.693,265.84C4101.693,271.562 4093.499,276.207 4083.407,276.207L3937.116,276.207C3927.024,276.207 3918.83,271.562 3918.83,265.84L3918.83,44.678C3918.83,38.956 3927.024,34.311 3937.116,34.311L4083.407,34.311C4093.499,34.311 4101.693,38.956 4101.693,44.678ZM4097.392,44.678C4097.392,40.302 4091.125,36.749 4083.407,36.749L3937.116,36.749C3929.397,36.749 3923.131,40.302 3923.131,44.678L3923.131,265.84C3923.131,270.216 3929.397,273.769 3937.116,273.769L4083.407,273.769C4091.125,273.769 4097.392,270.216 4097.392,265.84L4097.392,44.678Z"/></g><g transform="matrix(1.130315,0,0,1.70894,-534.073114,-58.634944)"><path d="M4093.699,44.678L4093.699,265.84C4093.699,269.06 4089.087,271.675 4083.407,271.675L3937.116,271.675C3931.436,271.675 3926.824,269.06 3926.824,265.84L3926.824,44.678C3926.824,41.457 3931.436,38.843 3937.116,38.843L4083.407,38.843C4089.087,38.843 4093.699,41.457 4093.699,44.678Z" style="fill:#b65508;"/><path d="M4093.699,44.678L4093.699,265.84C4093.699,269.06 4089.087,271.675 4083.407,271.675L3937.116,271.675C3931.436,271.675 3926.824,269.06 3926.824,265.84L3926.824,44.678C3926.824,41.457 3931.436,38.843 3937.116,38.843L4083.407,38.843C4089.087,38.843 4093.699,41.457 4093.699,44.678ZM4089.398,44.678C4089.398,42.803 4086.713,41.281 4083.407,41.281L3937.116,41.281C3933.809,41.281 3931.125,42.803 3931.125,44.678L3931.125,265.84C3931.125,267.715 3933.809,269.237 3937.116,269.237L4083.407,269.237C4086.713,269.237 4089.398,267.715 4089.398,265.84L4089.398,44.678Z"/></g><g transform="matrix(0.694744,0,0,1.096132,2681.950971,22.636615)"><rect x="1746.672" y="38.612" width="19.834" height="43.101"/></g><g transform="matrix(0.694744,0,0,1.096132,2874.864357,22.636615)"><rect x="1746.672" y="38.612" width="19.834" height="43.101"/></g><g transform="matrix(0.694744,0,0,1.096132,2681.950971,258.857088)"><rect x="1746.672" y="38.612" width="19.834" height="43.101"/></g><g transform="matrix(0.694744,0,0,1.096132,2874.864357,258.857088)"><rect x="1746.672" y="38.612" width="19.834" height="43.101"/></g><g transform="matrix(1.129862,0,0,0.968453,-516.250892,2.0078)"><rect x="3961.117" y="52.772" width="69.961" height="21.745" style="fill:#3a3a3a;"/><path d="M4031.079,52.772L4031.079,74.517L3961.117,74.517L3961.117,52.772L4031.079,52.772ZM4026.776,57.075L3965.42,57.075L3965.42,70.215L4026.776,70.215L4026.776,57.075Z"/></g></g></g></g></svg>`,
   "SP-17-RPS": `<svg width="100%" height="100%" viewBox="0 0 237 237" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><rect id="画板23" x="0" y="0" width="236.22" height="236.22" style="fill:none;"/><clipPath id="clip_RPS">
 <rect x="0" y="0" width="236.22" height="236.22"/></clipPath><g clip-path="url(#clip_RPS)">
-<circle cx="118.11" cy="118.11" r="118.11" style="fill:#f2af0d;"/><path d="M118.11,0c65.187,0 118.11,52.923 118.11,118.11c0,65.187 -52.923,118.11 -118.11,118.11c-65.187,0 -118.11,-52.923 -118.11,-118.11c0,-65.187 52.923,-118.11 118.11,-118.11Zm0,4.167c-62.887,0 -113.944,51.056 -113.944,113.944c0,62.887 51.056,113.944 113.944,113.944c62.887,0 113.944,-51.056 113.944,-113.944c0,-62.887 -51.056,-113.944 -113.944,-113.944Z"/></g></svg>`
+<circle cx="118.11" cy="118.11" r="118.11" style="fill:#f2af0d;"/><path d="M118.11,0c65.187,0 118.11,52.923 118.11,118.11c0,65.187 -52.923,118.11 -118.11,118.11c-65.187,0 -118.11,-52.923 -118.11,-118.11c0,-65.187 52.923,-118.11 118.11,-118.11Zm0,4.167c-62.887,0 -113.944,51.056 -113.944,113.944c0,62.887 51.056,113.944 113.944,113.944c62.887,0 113.944,-51.056 113.944,-113.944c0,-62.887 -51.056,-113.944 -113.944,-113.944Z"/></g></svg>`,
+  "SP-17-1.5TRBPS": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 644 438" width="100%" height="100%" aria-label="Vector Illustration" style="display: block; max-width: 100%;">  <style>    .bg-yellow { fill: #f2af0d; }    .bg-gray { fill: #c0c0c0; }    .bg-blue { fill: #7b9ab4; }    .bg-light { fill: #ebece9; }    .stroke-dark { fill: #000000; }  </style>
+  <g transform="translate(-3193.38 -1240.38)">
+    <g transform="matrix(1.0381 0 0 1.05714 -146.485 -95.8506)">
+      <g transform="matrix(3.06914 0 0 1.930815 514.687 1277.76)">
+        <path d="M1082.613,13.128L1082.613,198.295C1082.613,203.086 1080.122,206.975 1077.053,206.975L893.551,206.975C890.482,206.975 887.991,203.086 887.991,198.295L887.991,13.128C887.991,8.338 890.482,4.449 893.551,4.449L1077.053,4.449C1080.122,4.449 1082.613,8.338 1082.613,13.128Z" class="bg-yellow"/>
+        <path d="M1082.613,13.128L1082.613,198.295C1082.613,203.086 1080.122,206.975 1077.053,206.975L893.551,206.975C890.482,206.975 887.991,203.086 887.991,198.295L887.991,13.128C887.991,8.338 890.482,4.449 893.551,4.449L1077.053,4.449C1080.122,4.449 1082.613,8.338 1082.613,13.128ZM1081.305,13.128C1081.305,9.465 1079.4,6.49 1077.053,6.49L893.551,6.49C891.204,6.49 889.299,9.465 889.299,13.128L889.299,198.295C889.299,201.959 891.204,204.934 893.551,204.934L1077.053,204.934C1079.4,204.934 1081.305,201.959 1081.305,198.295L1081.305,13.128Z" class="stroke-dark"/>
+      </g>
+      <g transform="matrix(2.04609 0 0 0.551661 1423.14 1283.89)">
+        <path d="M1082.613,34.828L1082.613,206.975L887.991,206.975L887.991,34.828C887.991,18.061 891.728,4.449 896.332,4.449L1074.272,4.449C1078.876,4.449 1082.613,18.061 1082.613,34.828Z" class="bg-gray"/>
+        <path d="M1082.613,34.828L1082.613,206.975L887.991,206.975L887.991,34.828C887.991,18.061 891.728,4.449 896.332,4.449L1074.272,4.449C1078.876,4.449 1082.613,18.061 1082.613,34.828ZM1080.652,34.828C1080.652,22.004 1077.793,11.593 1074.272,11.593L896.332,11.593C892.811,11.593 889.952,22.004 889.952,34.828L889.952,199.83L1080.652,199.83L1080.652,34.828Z" class="stroke-dark"/>
+      </g>
+      <rect x="1746.672" y="38.612" width="19.834" height="43.101" transform="matrix(0.573642 0 0 1.036882 2238.09 1308.33)" class="stroke-dark"/>
+      <rect x="1746.672" y="38.612" width="19.834" height="43.101" transform="matrix(0.573642 0 0 1.036882 2824.04 1308.33)" class="stroke-dark"/>
+      <rect x="1746.672" y="38.612" width="19.834" height="43.101" transform="matrix(0.573642 0 0 1.036882 2238.09 1531.78)" class="stroke-dark"/>
+      <rect x="1746.672" y="38.612" width="19.834" height="43.101" transform="matrix(0.573642 0 0 1.036882 2824.04 1531.78)" class="stroke-dark"/>
+      <g transform="matrix(0.332278 0 0 2.95293 2171.12 -2419.87)">
+        <path d="M3182.759,1382.881C3182.759,1382.881 3182.759,1290.937 3182.759,1260.773C3182.759,1258.265 3191.778,1255.859 3207.831,1254.085C3223.885,1252.311 3245.659,1251.315 3268.362,1251.315L4415.443,1251.315L4415.443,1251.315C4415.443,1253.404 4400.114,1255.098 4381.205,1255.098C4212.657,1255.098 3471.068,1255.098 3268.362,1255.098C3239.995,1255.098 3217,1257.639 3217,1260.773C3217,1282.615 3217,1360.93 3217,1379.098C3217,1381.187 3201.671,1382.881 3182.762,1382.881C3182.76,1382.881 3182.759,1382.881 3182.759,1382.881Z" class="bg-blue"/>
+        <path d="M4414.924,1251.975C4412.097,1253.75 4398.076,1255.098 4381.205,1255.098L3268.362,1255.098C3239.995,1255.098 3217,1257.639 3217,1260.773L3217,1379.098C3217,1381.187 3201.67,1382.881 3182.76,1382.881L3182.759,1260.773C3182.759,1258.265 3191.778,1255.859 3207.831,1254.085C3223.885,1252.311 3245.659,1251.315 3268.362,1251.315L4409.403,1251.315L4409.405,1251.334C4409.452,1251.519 4410.185,1251.686 4411.333,1251.804C4412.588,1251.919 4414.133,1251.961 4414.924,1251.975ZM3188.799,1382.142C3201.471,1381.837 3210.96,1380.59 3210.96,1379.098L3210.96,1260.773C3210.96,1257.27 3236.66,1254.431 3268.362,1254.431L4381.205,1254.431C4394.713,1254.431 4406.003,1253.381 4408.761,1251.982L3268.362,1251.982C3247.26,1251.982 3227.023,1252.908 3212.102,1254.557C3197.181,1256.206 3188.799,1258.442 3188.799,1260.773L3188.799,1382.142Z" class="stroke-dark"/>
+      </g>
+      <g transform="matrix(0.812382 0 0 0.945946 624.839 90.584)">
+        <path d="M3205.188,1662.987C3197.454,1662.987 3191.184,1657.7 3191.184,1651.177C3191.184,1597.532 3191.184,1375.412 3191.184,1282.322C3191.184,1271.359 3196.348,1260.844 3205.541,1253.092C3214.734,1245.339 3227.202,1240.984 3240.202,1240.984C3353.741,1240.984 3630.056,1240.984 3695.373,1240.984C3703.107,1240.984 3709.377,1246.271 3709.377,1252.794C3709.377,1252.795 3709.377,1252.795 3709.377,1252.795L3240.202,1252.795C3230.916,1252.795 3222.01,1255.906 3215.444,1261.443C3208.878,1266.981 3205.189,1274.491 3205.189,1282.322L3205.189,1662.987L3205.188,1662.987Z" class="bg-light"/>
+        <path d="M3205.188,1662.987C3197.454,1662.987 3191.184,1657.7 3191.184,1651.177L3191.184,1282.322C3191.184,1271.359 3196.348,1260.844 3205.541,1253.092C3214.734,1245.339 3227.202,1240.984 3240.202,1240.984L3695.373,1240.984C3703.107,1240.984 3709.377,1246.272 3709.377,1252.794L3240.202,1252.795C3230.916,1252.795 3222.01,1255.906 3215.444,1261.443C3208.878,1266.981 3205.189,1274.491 3205.189,1282.322L3205.188,1662.987ZM3202.719,1660.68L3202.719,1282.322C3202.719,1273.939 3206.668,1265.898 3213.697,1259.97C3220.727,1254.042 3230.261,1250.712 3240.202,1250.712L3706.642,1250.712C3706.642,1250.712 3705.511,1246.34 3700.895,1243.067L3240.202,1243.067C3227.857,1243.067 3216.017,1247.203 3207.288,1254.565C3198.558,1261.927 3193.654,1271.911 3193.654,1282.322L3193.654,1651.177C3193.654,1655.834 3197.535,1659.727 3202.719,1660.68Z" class="stroke-dark"/>
+      </g>
+    </g>
+  </g>
+</svg>`,
+  "SP-17-1.5TLBPS": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 644 438" width="100%" height="100%" aria-label="Vector Illustration" style="display: block; max-width: 100%;">
+  <style>
+    .bg-yellow { fill: #f2af0d; }
+    .bg-gray { fill: #c0c0c0; }
+    .bg-blue { fill: #7b9ab4; }
+    .bg-light { fill: #ebece9; }
+    .stroke-dark { fill: #000000; }
+  </style>
+  <g transform="translate(-3193 -1913)">
+    <g transform="translate(-0.377953 -0.606299)">
+      <g transform="matrix(-3.18606 0 0 2.04115 6643.03 1927.63)">
+        <path d="M1082.613,13.128L1082.613,198.295C1082.613,203.086 1080.122,206.975 1077.053,206.975L893.551,206.975C890.482,206.975 887.991,203.086 887.991,198.295L887.991,13.128C887.991,8.338 890.482,4.449 893.551,4.449L1077.053,4.449C1080.122,4.449 1082.613,8.338 1082.613,13.128Z" class="bg-yellow"/>
+        <path d="M1082.613,13.128C1082.613,8.338 1080.122,4.449 1077.053,4.449L893.551,4.449C890.482,4.449 887.991,8.338 887.991,13.128L887.991,198.295C887.991,203.086 890.482,206.975 893.551,206.975L1077.053,206.975C1080.122,206.975 1082.613,203.086 1082.613,198.295L1082.613,13.128ZM1081.305,13.128L1081.305,198.295C1081.305,201.959 1079.4,204.934 1077.053,204.934L893.551,204.934C891.204,204.934 889.299,201.959 889.299,198.295L889.299,13.128C889.299,9.465 891.204,6.49 893.551,6.49L1077.053,6.49C1079.4,6.49 1081.305,9.465 1081.305,13.128Z" class="stroke-dark"/>
+      </g>
+      <g transform="matrix(-2.12404 0 0 0.583185 5699.96 1934.12)">
+        <path d="M1082.613,34.828L1082.613,206.975L887.991,206.975L887.991,34.828C887.991,18.061 891.728,4.449 896.332,4.449L1074.272,4.449C1078.876,4.449 1082.613,18.061 1082.613,34.828Z" class="bg-gray"/>
+        <path d="M1082.613,34.828C1082.613,18.061 1078.876,4.449 1074.272,4.449L896.332,4.449C891.728,4.449 887.991,18.061 887.991,34.828L887.991,206.975L1082.613,206.975L1082.613,34.828ZM1080.652,34.828L1080.652,199.83L889.952,199.83L889.952,34.828C889.952,22.004 892.811,11.593 896.332,11.593L1074.272,11.593C1077.793,11.593 1080.652,22.004 1080.652,34.828Z" class="stroke-dark"/>
+      </g>
+      <rect x="1746.672" y="38.612" width="19.834" height="43.101" transform="matrix(-0.595495 0 0 1.09613 4853.97 1959.96)" class="stroke-dark"/>
+      <rect x="1746.672" y="38.612" width="19.834" height="43.101" transform="matrix(-0.595495 0 0 1.09613 4245.7 1959.96)" class="stroke-dark"/>
+      <rect x="1746.672" y="38.612" width="19.834" height="43.101" transform="matrix(-0.595495 0 0 1.09613 4853.97 2196.18)" class="stroke-dark"/>
+      <rect x="1746.672" y="38.612" width="19.834" height="43.101" transform="matrix(-0.595495 0 0 1.09613 4245.7 2196.18)" class="stroke-dark"/>
+      <g transform="matrix(-0.344936 0 0 3.12167 4923.49 -1981.29)">
+        <path d="M3182.759,1382.881C3182.759,1382.881 3182.759,1290.937 3182.759,1260.773C3182.759,1258.265 3191.778,1255.859 3207.831,1254.085C3223.885,1252.311 3245.659,1251.315 3268.362,1251.315L4415.443,1251.315L4415.443,1251.315C4415.443,1253.404 4400.114,1255.098 4381.205,1255.098C4212.657,1255.098 3471.068,1255.098 3268.362,1255.098C3239.995,1255.098 3217,1257.639 3217,1260.773C3217,1282.615 3217,1360.93 3217,1379.098C3217,1381.187 3201.671,1382.881 3182.762,1382.881C3182.76,1382.881 3182.759,1382.881 3182.759,1382.881Z" class="bg-blue"/>
+        <path d="M4415.443,1251.315L3268.362,1251.315C3245.659,1251.315 3223.885,1252.311 3207.831,1254.085C3191.778,1255.859 3182.759,1258.265 3182.759,1260.773L3182.76,1382.881C3201.67,1382.881 3217,1381.187 3217,1379.098L3217,1260.773C3217,1257.639 3239.995,1255.098 3268.362,1255.098L4381.205,1255.098C4400.114,1255.098 4415.443,1253.404 4415.443,1251.315ZM3188.799,1382.142L3188.799,1260.773C3188.799,1258.442 3197.181,1256.206 3212.102,1254.557C3227.023,1252.908 3247.26,1251.982 3268.362,1251.982L4408.756,1251.982C4405.992,1253.382 4394.706,1254.431 4381.205,1254.431L3268.362,1254.431C3236.66,1254.431 3210.96,1257.27 3210.96,1260.773L3210.96,1379.098C3210.96,1380.59 3201.471,1381.837 3188.799,1382.142Z" class="stroke-dark"/>
+      </g>
+      <g transform="matrix(-0.84333 0 0 1 6528.68 672.622)">
+        <path d="M3205.188,1662.987C3197.454,1662.987 3191.184,1657.7 3191.184,1651.177C3191.184,1597.532 3191.184,1375.412 3191.184,1282.322C3191.184,1271.359 3196.348,1260.844 3205.541,1253.092C3214.734,1245.339 3227.202,1240.984 3240.202,1240.984C3353.741,1240.984 3630.056,1240.984 3695.373,1240.984C3703.107,1240.984 3709.377,1246.271 3709.377,1252.794C3709.377,1252.795 3709.377,1252.795 3709.377,1252.795L3240.202,1252.795C3230.916,1252.795 3222.01,1255.906 3215.444,1261.443C3208.878,1266.981 3205.189,1274.491 3205.189,1282.322L3205.189,1662.987L3205.188,1662.987Z" class="bg-light"/>
+        <path d="M3205.188,1662.987L3205.189,1282.322C3205.189,1274.491 3208.878,1266.981 3215.444,1261.443C3222.01,1255.906 3230.916,1252.795 3240.202,1252.795L3709.377,1252.794C3709.377,1246.272 3703.107,1240.984 3695.373,1240.984L3240.202,1240.984C3227.202,1240.984 3214.734,1245.339 3205.541,1253.092C3196.348,1260.844 3191.184,1271.359 3191.184,1282.322L3191.184,1651.177C3191.184,1657.7 3197.454,1662.987 3205.188,1662.987ZM3706.642,1250.712L3240.202,1250.712C3230.261,1250.712 3220.727,1254.042 3213.697,1259.97C3206.668,1265.898 3202.719,1273.939 3202.719,1282.322L3202.719,1660.68C3197.535,1659.727 3193.654,1655.834 3193.654,1651.177L3193.654,1282.322C3193.654,1271.911 3198.558,1261.927 3207.288,1254.565C3216.017,1247.203 3227.857,1243.067 3240.202,1243.067L3695.373,1243.067C3700.895,1243.067 3705.511,1246.34 3706.642,1250.712Z" class="stroke-dark"/>
+      </g>
+    </g>
+  </g>
+</svg>`
 };
 
 const SOFA_MODELS = {
@@ -1283,10 +1386,21 @@ const DEFAULT_SEAT_COLOR = "#f2af0d";  // 坐墊顏色
 // 緩存動態生成的 Blob URL，依「型號 + 椅背顏色 + 坐墊顏色」隔離快取
 const BLOB_URL_CACHE = {};
 
-function getModuleImageUrl(modelId, seatColor, backColor) {
-  const sc = (seatColor || DEFAULT_SEAT_COLOR).toLowerCase();
-  const bc = (backColor || DEFAULT_BACK_COLOR).toLowerCase();
-  const cacheKey = `${modelId}|${sc}|${bc}`;
+// 預設屏風顏色（對應 TRBPS / TLBPS SVG 中的 CSS class fill 值）
+const DEFAULT_PARTITION_INNER_COLOR = '#7b9ab4';  // .bg-blue
+const DEFAULT_PARTITION_OUTER_COLOR = '#ebece9';  // .bg-light
+// 屏風型號集合
+const PARTITION_MODEL_IDS = new Set(['SP-17-1.5TRBPS', 'SP-17-1.5TLBPS']);
+
+function getModuleImageUrl(modelId, seatColor, backColor, partitionInnerColor, partitionOuterColor) {
+  const sc  = (seatColor  || DEFAULT_SEAT_COLOR).toLowerCase();
+  const bc  = (backColor  || DEFAULT_BACK_COLOR).toLowerCase();
+  const pic = (partitionInnerColor || DEFAULT_PARTITION_INNER_COLOR).toLowerCase();
+  const poc = (partitionOuterColor || DEFAULT_PARTITION_OUTER_COLOR).toLowerCase();
+  // 屏風型號才把屏風色納入 cache key，其餘型號固定用預設值（避免 key 爆炸）
+  const cacheKey = PARTITION_MODEL_IDS.has(modelId)
+    ? `${modelId}|${sc}|${bc}|${pic}|${poc}`
+    : `${modelId}|${sc}|${bc}`;
 
   if (BLOB_URL_CACHE[cacheKey]) {
     return BLOB_URL_CACHE[cacheKey];
@@ -1297,12 +1411,22 @@ function getModuleImageUrl(modelId, seatColor, backColor) {
   // 使用唯一佔位符避免兩個顏色互相污染：
   // 先將兩個原始色各換成不含 # 的安全佔位符，再統一換成目標色。
   // 這樣即使 sc === DEFAULT_BACK_COLOR 或 bc === DEFAULT_SEAT_COLOR 也不會互串。
-  const SEAT_PLACEHOLDER = '__SEAT_COLOR__';
-  const BACK_PLACEHOLDER = '__BACK_COLOR__';
+  const SEAT_PLACEHOLDER  = '__SEAT_COLOR__';
+  const BACK_PLACEHOLDER  = '__BACK_COLOR__';
   svgString = svgString.split(DEFAULT_SEAT_COLOR).join(SEAT_PLACEHOLDER);
   svgString = svgString.split(DEFAULT_BACK_COLOR).join(BACK_PLACEHOLDER);
   svgString = svgString.split(SEAT_PLACEHOLDER).join(sc);
   svgString = svgString.split(BACK_PLACEHOLDER).join(bc);
+
+  // 屏風型號：替換 style 區塊中的屏風內側（.bg-blue）與外側（.bg-light）顏色
+  if (PARTITION_MODEL_IDS.has(modelId)) {
+    const INNER_PLACEHOLDER = '__PARTITION_INNER__';
+    const OUTER_PLACEHOLDER = '__PARTITION_OUTER__';
+    svgString = svgString.split(DEFAULT_PARTITION_INNER_COLOR).join(INNER_PLACEHOLDER);
+    svgString = svgString.split(DEFAULT_PARTITION_OUTER_COLOR).join(OUTER_PLACEHOLDER);
+    svgString = svgString.split(INNER_PLACEHOLDER).join(pic);
+    svgString = svgString.split(OUTER_PLACEHOLDER).join(poc);
+  }
 
   const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -2001,7 +2125,13 @@ function insertModule(type) {
     backColor: hasBackColorBlock ? DEFAULT_BACK_COLOR : "",
     backLabel: "",
     seatLabel: "",
-    socketQty: 0   // 加購插座組數量；圓凳（SP-17-RPS）不可加購，固定為 0
+    socketQty: 0,  // 加購插座組數量；圓凳（SP-17-RPS）不可加購，固定為 0
+    // 屏風相關欄位（僅 SP-17-1.5TRBS / SP-17-1.5TLBS 可啟用）
+    hasPartition: false,
+    partitionInnerColor: '#7b9ab4',  // 屏風內側預設色（.bg-blue）
+    partitionOuterColor: '#ebece9',  // 屏風外側預設色（.bg-light）
+    partitionInnerLabel: '',         // 屏風內側布號
+    partitionOuterLabel: ''          // 屏風外側布號
   };
 
   modules.push(newModule);
@@ -2095,7 +2225,7 @@ function renderModuleDOM(mod) {
   div.style.top = `${mod.y}px`;
 
   const imgEl = document.createElement('img');
-  imgEl.src = getModuleImageUrl(mod.id, mod.seatColor, mod.backColor);
+  imgEl.src = getModuleImageUrl(mod.id, mod.seatColor, mod.backColor, mod.partitionInnerColor, mod.partitionOuterColor);
   div.appendChild(imgEl);
 
   div.style.transform = `rotate(${mod.rotate}deg)`;
@@ -2739,7 +2869,13 @@ function updateHslSliderGradients(panel, h, s, l) {
 }
 
 /* 為一個 color-popup 建立 HSL 面板並附加 */
-function appendHslPicker(popup, mod, key) {
+/**
+ * @param {HTMLElement} popup  - 掛載目標
+ * @param {object}      mod    - 模塊物件
+ * @param {string}      key    - 顏色屬性名稱（e.g. 'backColor', 'partitionInnerColor'）
+ * @param {Function}   [onApply] - 可選回呼 (uid, key, hex)；未傳時預設使用 setModuleColor
+ */
+function appendHslPicker(popup, mod, key, onApply) {
   const toggleBtn = document.createElement('button');
   toggleBtn.type = 'button';
   toggleBtn.className = 'hsl-toggle-btn';
@@ -2882,7 +3018,11 @@ function appendHslPicker(popup, mod, key) {
     e.stopPropagation();
     const [h2,s2,l2] = getCurrentHslValues(panel);
     const hex = hslToHex(h2,s2,l2);
-    setModuleColor(mod.uid, key, hex);
+    if (onApply) {
+      onApply(mod.uid, key, hex);
+    } else {
+      setModuleColor(mod.uid, key, hex);
+    }
     const btn = document.getElementById(`colorBtn-${key}-${mod.uid}`);
     if (btn) btn.style.background = hex;
   });
@@ -2941,6 +3081,233 @@ function updateHslPreview(panel, h, s, l) {
   const hex = hslToHex(h, s, l);
   if (swatch) swatch.style.background = hex;
   if (label) label.textContent = `hsl(${h} ${s}% ${l}%)`;
+}
+
+// ==========================================
+// 屏風欄位：勾選框 + 雙色票選色器
+// ==========================================
+const PARTITION_ELIGIBLE = new Set(['SP-17-1.5TRBS', 'SP-17-1.5TLBS']);
+
+// 屏風勾選時的型號對應表
+const PARTITION_MAP = {
+  'SP-17-1.5TRBS': {
+    partitionId:   'SP-17-1.5TRBPS',
+    partitionName: '1.5人右屏風',
+    partitionSpec: '1090*740*1250',
+    partitionW:    1090,
+    partitionH:    740
+  },
+  'SP-17-1.5TLBS': {
+    partitionId:   'SP-17-1.5TLBPS',
+    partitionName: '1.5人左屏風',
+    partitionSpec: '1090*740*1250',
+    partitionW:    1090,
+    partitionH:    740
+  }
+};
+// 原始型號屬性（取消勾選時還原）
+const PARTITION_BASE_MAP = {
+  'SP-17-1.5TRBS': { name: '1.5人右椅背', spec: '1050*700*750', width: 1050, height: 700 },
+  'SP-17-1.5TLBS': { name: '1.5人左椅背', spec: '1050*700*750', width: 1050, height: 700 }
+};
+
+/**
+ * 切換屏風勾選狀態。
+ * 勾選：mod.id → 屏風型號、尺寸 / 名稱 / 規格更新、畫布 DOM 更新
+ * 取消：還原原始型號、尺寸、名稱、規格、畫布 DOM 更新
+ */
+function togglePartition(uid) {
+  const mod = modules.find(m => m.uid === uid);
+  if (!mod) return;
+
+  const baseId = mod._baseId || mod.id;
+  if (!PARTITION_ELIGIBLE.has(baseId)) return;
+
+  mod.hasPartition = !mod.hasPartition;
+
+  if (mod.hasPartition) {
+    // ── 啟用屏風 ──
+    mod._baseId = baseId;                          // 記錄原始型號
+    const pm = PARTITION_MAP[baseId];
+    mod.id     = pm.partitionId;
+    mod.name   = pm.partitionName;
+    mod.spec   = pm.partitionSpec;
+    mod.width  = pm.partitionW;
+    mod.height = pm.partitionH;
+  } else {
+    // ── 取消屏風 ──
+    const bm = PARTITION_BASE_MAP[baseId];
+    mod.id     = baseId;
+    mod.name   = bm.name;
+    mod.spec   = bm.spec;
+    mod.width  = bm.width;
+    mod.height = bm.height;
+    mod._baseId = undefined;
+  }
+
+  // 更新畫布 DOM：尺寸 + 圖像
+  const div = document.getElementById(`mod-${uid}`);
+  if (div) {
+    div.style.width  = `${mod.width  * SCALE}px`;
+    div.style.height = `${mod.height * SCALE}px`;
+    const img = div.querySelector('img');
+    if (img) img.src = getModuleImageUrl(mod.id, mod.seatColor, mod.backColor, mod.partitionInnerColor, mod.partitionOuterColor);
+  }
+
+  // 展開 / 收合色票區塊（不重繪整列，避免色票重建後失焦）
+  const colorsBlock = document.getElementById(`partition-colors-${uid}`);
+  if (colorsBlock) colorsBlock.style.display = mod.hasPartition ? 'flex' : 'none';
+
+  // 重新渲染清單（名稱、型號、規格欄需更新）
+  renderTable();
+}
+
+/**
+ * 建立「屏風」欄的 TD 元素。
+ * - 不可勾選型號：顯示「—」
+ * - 可勾選型號（SP-17-1.5TRBS / TLBS）：
+ *     顯示勾選框；勾選後展開屏風內側／外側兩組色票選色器與布號輸入框
+ */
+function createPartitionCell(mod) {
+  const td = document.createElement('td');
+  td.className = 'partition-cell';
+
+  // 不可勾選的型號 → 顯示 em dash
+  // 判斷依據：原始型號（_baseId 優先）是否在可勾選集合內
+  const eligibleId = mod._baseId || mod.id;
+  if (!PARTITION_ELIGIBLE.has(eligibleId)) {
+    td.style.color = '#bbb';
+    td.style.textAlign = 'center';
+    td.textContent = '—';
+    return td;
+  }
+
+  // 勾選框列
+  const cbRow = document.createElement('div');
+  cbRow.className = 'partition-checkbox-row';
+
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.id = `partition-cb-${mod.uid}`;
+  cb.checked = !!mod.hasPartition;
+  cb.onclick = (e) => e.stopPropagation();
+  cb.onchange = () => togglePartition(mod.uid);
+
+  const lbl = document.createElement('label');
+  lbl.htmlFor = `partition-cb-${mod.uid}`;
+  lbl.textContent = '加屏風';
+
+  cbRow.appendChild(cb);
+  cbRow.appendChild(lbl);
+  td.appendChild(cbRow);
+
+  // 色票區塊（只有勾選時才顯示）
+  const colorsBlock = document.createElement('div');
+  colorsBlock.className = 'partition-colors-block';
+  colorsBlock.id = `partition-colors-${mod.uid}`;
+  colorsBlock.style.display = mod.hasPartition ? 'flex' : 'none';
+
+  // 建立單一色票列（label + 色票按鈕 + 布號輸入）
+  function buildPartitionColorRow(labelText, colorKey, labelKey) {
+    const row = document.createElement('div');
+    row.className = 'partition-color-row';
+
+    const rowLabel = document.createElement('span');
+    rowLabel.className = 'partition-color-label';
+    rowLabel.textContent = labelText;
+    row.appendChild(rowLabel);
+
+    // 重用 createColorCell 的色票元件結構
+    const wrap = document.createElement('div');
+    wrap.className = 'color-select';
+    wrap.id = `colorSelect-${colorKey}-${mod.uid}`;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'color-swatch-btn';
+    btn.id = `colorBtn-${colorKey}-${mod.uid}`;
+    btn.style.background = mod[colorKey];
+    btn.title = labelText;
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      togglePartitionColorPopup(mod.uid, colorKey);
+    };
+
+    const popup = document.createElement('div');
+    popup.className = 'color-popup';
+    popup.id = `colorPopup-${colorKey}-${mod.uid}`;
+
+    const swatchGrid = document.createElement('div');
+    swatchGrid.className = 'color-swatch-grid';
+    COLOR_PALETTE.forEach(color => {
+      const opt = document.createElement('button');
+      opt.type = 'button';
+      opt.className = `color-swatch-option${(mod[colorKey] || '').toLowerCase() === color.toLowerCase() ? ' selected' : ''}`;
+      opt.style.background = color;
+      opt.title = color;
+      opt.onclick = (e) => {
+        e.stopPropagation();
+        setPartitionColor(mod.uid, colorKey, color);
+      };
+      swatchGrid.appendChild(opt);
+    });
+    popup.appendChild(swatchGrid);
+    appendHslPicker(popup, mod, colorKey, setPartitionColor);
+
+    wrap.appendChild(btn);
+    wrap.appendChild(popup);
+    row.appendChild(wrap);
+
+    // 布號輸入框
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'fabric-label-input';
+    input.placeholder = '請填入布號';
+    input.value = mod[labelKey] || '';
+    input.onclick = (e) => e.stopPropagation();
+    input.oninput = (e) => { mod[labelKey] = e.target.value; };
+    row.appendChild(input);
+
+    return row;
+  }
+
+  colorsBlock.appendChild(buildPartitionColorRow('內側', 'partitionInnerColor', 'partitionInnerLabel'));
+  colorsBlock.appendChild(buildPartitionColorRow('外側', 'partitionOuterColor', 'partitionOuterLabel'));
+  td.appendChild(colorsBlock);
+
+  return td;
+}
+
+function togglePartitionColorPopup(uid, colorKey) {
+  const target = document.getElementById(`colorSelect-${colorKey}-${uid}`);
+  if (!target) return;
+  const isOpen = target.classList.contains('open');
+  closeAllColorPopups();
+  if (!isOpen) target.classList.add('open');
+}
+
+function setPartitionColor(uid, colorKey, color) {
+  const mod = modules.find(m => m.uid === uid);
+  if (!mod) return;
+  mod[colorKey] = color;
+
+  // 更新畫布 SVG
+  const imgEl = document.querySelector(`#mod-${uid} img`);
+  if (imgEl) imgEl.src = getModuleImageUrl(mod.id, mod.seatColor, mod.backColor, mod.partitionInnerColor, mod.partitionOuterColor);
+
+  // 更新色塊按鈕
+  const btn = document.getElementById(`colorBtn-${colorKey}-${uid}`);
+  if (btn) btn.style.background = color;
+
+  // 更新選取狀態
+  const popup = document.getElementById(`colorPopup-${colorKey}-${uid}`);
+  if (popup) {
+    popup.querySelectorAll('.color-swatch-option').forEach(opt => {
+      opt.classList.toggle('selected', opt.title.toLowerCase() === color.toLowerCase());
+    });
+  }
+
+  closeAllColorPopups();
 }
 
 function createColorCell(mod, key) {
@@ -3055,7 +3422,7 @@ function setModuleColor(uid, key, color) {
   const div = document.getElementById(`mod-${uid}`);
   if (div) {
     const img = div.querySelector('img');
-    if (img) img.src = getModuleImageUrl(mod.id, mod.seatColor, mod.backColor);
+    if (img) img.src = getModuleImageUrl(mod.id, mod.seatColor, mod.backColor, mod.partitionInnerColor, mod.partitionOuterColor);
   }
 
   // 更新清單上的色塊按鈕與選取狀態，不需重繪整個表格
@@ -3082,20 +3449,24 @@ function buildAggregatedRows() {
     // 移除自動插入的插座標記，取得純用戶備註作為分組 key
     const cleanNote = mod.note.split(SOCKET_NOTE_SEPARATOR).join('').trim();
     const hasSocket = (mod.socketQty || 0) > 0 ? '1' : '0';
-    const key = `${mod.id}\u0001${mod.backLabel}\u0001${mod.seatLabel}\u0001${cleanNote}\u0001${hasSocket}`;
+    // 屏風布號也納入分組 key，確保不同布號的屏風不被合併
+    const key = `${mod.id}\u0001${mod.backLabel}\u0001${mod.seatLabel}\u0001${mod.partitionInnerLabel || ''}\u0001${mod.partitionOuterLabel || ''}\u0001${cleanNote}\u0001${hasSocket}`;
     if (!groups.has(key)) {
       groups.set(key, {
-        name:      mod.name,
-        id:        mod.isCustom ? '' : (mod.id === 'SP-17-ST' ? '' : mod.id),
-        spec:      mod.spec || `${mod.width} × ${mod.height}`,
-        backColor: mod.backColor,
-        seatColor: mod.seatColor,
-        backLabel: mod.backLabel,
-        seatLabel: mod.seatLabel,
-        cleanNote: cleanNote,
-        qty:       0,
-        socketQtyTotal: 0,
-        uids:      []
+        name:                mod.name,
+        id:                  mod.isCustom ? '' : (mod.id === 'SP-17-ST' ? '' : mod.id),
+        spec:                mod.spec || `${mod.width} × ${mod.height}`,
+        backColor:           mod.backColor,
+        seatColor:           mod.seatColor,
+        backLabel:           mod.backLabel,
+        seatLabel:           mod.seatLabel,
+        partitionInnerLabel: mod.partitionInnerLabel || '',
+        partitionOuterLabel: mod.partitionOuterLabel || '',
+        hasPartition:        !!mod.hasPartition,
+        cleanNote:           cleanNote,
+        qty:                 0,
+        socketQtyTotal:      0,
+        uids:                []
       });
     }
     const g = groups.get(key);
@@ -3107,10 +3478,12 @@ function buildAggregatedRows() {
   // 決定每個群組的顯示 note：將布號前置，再附加插座標記
   const result = Array.from(groups.values());
   result.forEach(g => {
-    // 將椅背布號、坐墊布號組成前綴，放入 note 欄位
+    // 將椅背布號、坐墊布號、屏風布號組成前綴，放入 note 欄位
     const fabricParts = [];
-    if (g.backColor && g.backLabel) fabricParts.push(`椅背布號:${g.backLabel}`);
-    if (g.seatLabel)                fabricParts.push(`坐墊布號:${g.seatLabel}`);
+    if (g.backColor && g.backLabel)  fabricParts.push(`椅背布號:${g.backLabel}`);
+    if (g.seatLabel)                  fabricParts.push(`坐墊布號:${g.seatLabel}`);
+    if (g.hasPartition && g.partitionInnerLabel) fabricParts.push(`屏風內側布號:${g.partitionInnerLabel}`);
+    if (g.hasPartition && g.partitionOuterLabel) fabricParts.push(`屏風外側布號:${g.partitionOuterLabel}`);
     const fabricPrefix = fabricParts.length > 0 ? fabricParts.join(' / ') : '';
 
     // 組合：布號前綴獨立一行 + 用戶原始備註 + 插座標記
@@ -3184,6 +3557,12 @@ function renderTable() {
       tdNote.style.whiteSpace = 'pre-line';
       tdNote.textContent = g.note;
 
+      // 彙整模式：屏風欄顯示「—」（屏風布號已移入「註記」欄位）
+      const tdPartitionAgg = document.createElement('td');
+      tdPartitionAgg.style.color = '#bbb';
+      tdPartitionAgg.style.textAlign = 'center';
+      tdPartitionAgg.textContent = '\u2014';
+
       tr.appendChild(tdName);
       tr.appendChild(tdId);
       tr.appendChild(tdSpec);
@@ -3191,6 +3570,7 @@ function renderTable() {
       tr.appendChild(tdBackColor);
       tr.appendChild(tdSeatColor);
       tr.appendChild(tdSocket);
+      tr.appendChild(tdPartitionAgg);
       tr.appendChild(tdNote);
       tbody.appendChild(tr);
     });
@@ -3201,7 +3581,7 @@ function renderTable() {
       // 分隔線列
       const sepTr = document.createElement('tr');
       const sepTd = document.createElement('td');
-      sepTd.colSpan = 8;
+      sepTd.colSpan = 9;
       sepTd.style.padding = '0';
       sepTd.style.borderTop = '2px dashed #FFCE1B';
       sepTr.appendChild(sepTd);
@@ -3230,11 +3610,12 @@ function renderTable() {
       sTdQty.style.color = '#b8860b';
       sTdQty.textContent = totalSocketQty;
 
-      // 其餘欄（椅背、坐墊、加購插座組欄、註記）空白
+      // 其餘欄（椅背、坐墊、加購插座組欄、屏風、註記）空白
       const sTdEmpty1 = document.createElement('td');
       const sTdEmpty2 = document.createElement('td');
       const sTdEmpty3 = document.createElement('td');
       const sTdEmpty4 = document.createElement('td');
+      const sTdEmpty5 = document.createElement('td');
 
       socketTr.appendChild(sTdName);
       socketTr.appendChild(sTdId);
@@ -3244,6 +3625,7 @@ function renderTable() {
       socketTr.appendChild(sTdEmpty2);
       socketTr.appendChild(sTdEmpty3);
       socketTr.appendChild(sTdEmpty4);
+      socketTr.appendChild(sTdEmpty5);
       tbody.appendChild(socketTr);
     }
 
@@ -3358,6 +3740,8 @@ function renderTable() {
       tdSocket.appendChild(socketInput);
     }
 
+    const tdPartition = createPartitionCell(mod);
+
     tr.appendChild(tdName);
     tr.appendChild(tdId);
     tr.appendChild(tdSpec);
@@ -3365,6 +3749,7 @@ function renderTable() {
     tr.appendChild(tdBackColor);
     tr.appendChild(tdSeatColor);
     tr.appendChild(tdSocket);
+    tr.appendChild(tdPartition);
     tr.appendChild(tdNote);
     tbody.appendChild(tr);
   });
@@ -3474,11 +3859,12 @@ function renderSocketSubRow(uid) {
     tdQty.style.color = '#b8860b';
     tdQty.textContent = mod.socketQty;
 
-    // 其餘欄（椅背、坐墊、加購插座組input、註記）空白
+    // 其餘欄（椅背、坐墊、加購插座組input、屏風、註記）空白
     const tdEmpty1 = document.createElement('td');
     const tdEmpty2 = document.createElement('td');
     const tdEmpty3 = document.createElement('td');
     const tdEmpty4 = document.createElement('td');
+    const tdEmpty5 = document.createElement('td');
 
     subTr.appendChild(tdName);
     subTr.appendChild(tdId);
@@ -3488,6 +3874,7 @@ function renderSocketSubRow(uid) {
     subTr.appendChild(tdEmpty2);
     subTr.appendChild(tdEmpty3);
     subTr.appendChild(tdEmpty4);
+    subTr.appendChild(tdEmpty5);
 
     // 插入在父列之後
     parentRow.insertAdjacentElement('afterend', subTr);
@@ -3651,7 +4038,15 @@ function exportCSV() {
     modules.forEach(mod => {
       const backLbl  = mod.backColor ? (mod.backLabel  || '') : '';
       const seatLbl  = mod.seatLabel || '';
-      csvContent += `${escCSV(mod.name)},${escCSV(mod.isCustom ? '' : (mod.id === 'SP-17-ST' ? '' : mod.id))},${escCSV(mod.spec || `${mod.width}*${mod.height}`)},${escCSV('1')},${escCSV(backLbl)},${escCSV(seatLbl)},${escCSV(mod.note)}\n`;
+      // 屏風布號併入 note 欄（不另設 CSV 欄）
+      const partitionParts = [];
+      if (mod.hasPartition && mod.partitionInnerLabel) partitionParts.push(`屏風內側布號:${mod.partitionInnerLabel}`);
+      if (mod.hasPartition && mod.partitionOuterLabel) partitionParts.push(`屏風外側布號:${mod.partitionOuterLabel}`);
+      const partitionPrefix = partitionParts.join(' / ');
+      const cleanNote = mod.note.split(SOCKET_NOTE_SEPARATOR).join('').trim();
+      const noteParts = [partitionPrefix, cleanNote].filter(Boolean);
+      const exportNote = noteParts.join('\n') + (mod.note.includes(SOCKET_NOTE_SEPARATOR) ? SOCKET_NOTE_SEPARATOR : '');
+      csvContent += `${escCSV(mod.name)},${escCSV(mod.isCustom ? '' : (mod.id === 'SP-17-ST' ? '' : mod.id))},${escCSV(mod.spec || `${mod.width}*${mod.height}`)},${escCSV('1')},${escCSV(backLbl)},${escCSV(seatLbl)},${escCSV(exportNote)}\n`;
     });
   }
 
@@ -3756,7 +4151,7 @@ function captureCanvas() {
 
   modules.forEach(mod => {
     const img = new Image();
-    img.src = getModuleImageUrl(mod.id, mod.seatColor, mod.backColor);
+    img.src = getModuleImageUrl(mod.id, mod.seatColor, mod.backColor, mod.partitionInnerColor, mod.partitionOuterColor);
 
     img.onload = () => {
       ctx.save();
@@ -4211,7 +4606,7 @@ function applyCustomWidth(uid, newWidthMm) {
         div.style.width  = `${model.width  * SCALE}px`;
         div.style.height = `${model.height * SCALE}px`;
         const img = div.querySelector('img');
-        if (img) img.src = getModuleImageUrl(mod.id, mod.seatColor, mod.backColor);
+        if (img) img.src = getModuleImageUrl(mod.id, mod.seatColor, mod.backColor, mod.partitionInnerColor, mod.partitionOuterColor);
       }
 
       renderTable();
@@ -4240,7 +4635,7 @@ function applyCustomWidth(uid, newWidthMm) {
   if (div) {
     div.style.width = `${newWidthMm * SCALE}px`;
     const img = div.querySelector('img');
-    if (img) img.src = getModuleImageUrl(mod.id, mod.seatColor, mod.backColor);
+    if (img) img.src = getModuleImageUrl(mod.id, mod.seatColor, mod.backColor, mod.partitionInnerColor, mod.partitionOuterColor);
   }
 
   // 更新寬度標注
