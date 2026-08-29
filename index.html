@@ -3093,14 +3093,14 @@ const PARTITION_MAP = {
   'SP-17-1.5TRBS': {
     partitionId:   'SP-17-1.5TRBPS',
     partitionName: '1.5人右屏風',
-    partitionSpec: '1090*740*1250',
+    partitionSpec: '1090*740*1200',
     partitionW:    1090,
     partitionH:    740
   },
   'SP-17-1.5TLBS': {
     partitionId:   'SP-17-1.5TLBPS',
     partitionName: '1.5人左屏風',
-    partitionSpec: '1090*740*1250',
+    partitionSpec: '1090*740*1200',
     partitionW:    1090,
     partitionH:    740
   }
@@ -3134,6 +3134,23 @@ function togglePartition(uid) {
     mod.spec   = pm.partitionSpec;
     mod.width  = pm.partitionW;
     mod.height = pm.partitionH;
+
+    // ── 以坐墊顏色作為屏風內側預設色、椅背顏色作為屏風外側預設色 ──
+    // 僅在尚未設定（或為預設值）時才帶入，避免覆蓋使用者已手動選的顏色
+    if (!mod.partitionInnerColor || mod.partitionInnerColor === DEFAULT_PARTITION_INNER_COLOR) {
+      mod.partitionInnerColor = mod.seatColor || DEFAULT_SEAT_COLOR;
+    }
+    if (!mod.partitionOuterColor || mod.partitionOuterColor === DEFAULT_PARTITION_OUTER_COLOR) {
+      mod.partitionOuterColor = mod.backColor || DEFAULT_BACK_COLOR;
+    }
+
+    // ── 從椅背/坐墊布號帶入屏風布號（同樣只在空白時帶入）──
+    if (!mod.partitionInnerLabel) {
+      mod.partitionInnerLabel = mod.seatLabel || '';
+    }
+    if (!mod.partitionOuterLabel) {
+      mod.partitionOuterLabel = mod.backLabel || '';
+    }
   } else {
     // ── 取消屏風 ──
     const bm = PARTITION_BASE_MAP[baseId];
@@ -3486,8 +3503,18 @@ function buildAggregatedRows() {
     if (g.hasPartition && g.partitionOuterLabel) fabricParts.push(`屏風外側布號:${g.partitionOuterLabel}`);
     const fabricPrefix = fabricParts.length > 0 ? fabricParts.join(' / ') : '';
 
-    // 組合：布號前綴獨立一行 + 用戶原始備註 + 插座標記
-    const baseNote = [fabricPrefix, g.cleanNote].filter(Boolean).join('\n');
+    // 檢查屏風布號是否與椅背/坐墊布號不一致，若有不一致則標註「訂製布色」
+    // 規則：椅背布號 vs 屏風外側布號、坐墊布號 vs 屏風內側布號
+    let hasCustomFabric = false;
+    if (g.hasPartition) {
+      const backMismatch  = (g.backLabel  || '') !== (g.partitionOuterLabel || '');
+      const seatMismatch  = (g.seatLabel  || '') !== (g.partitionInnerLabel || '');
+      if (backMismatch || seatMismatch) hasCustomFabric = true;
+    }
+
+    // 組合：訂製布色標註 + 布號前綴獨立一行 + 用戶原始備註 + 插座標記
+    const noteParts = [hasCustomFabric ? '*訂製布色*' : '', fabricPrefix, g.cleanNote].filter(Boolean);
+    const baseNote = noteParts.join('\n');
     g.note = g.socketQtyTotal > 0
       ? (baseNote ? baseNote + SOCKET_NOTE_SEPARATOR : SOCKET_NOTE_SEPARATOR.trim())
       : baseNote;
