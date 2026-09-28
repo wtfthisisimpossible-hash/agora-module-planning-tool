@@ -1136,6 +1136,7 @@ tr.multi-selected-row td {
     <div class="canvas-header">
       <div style="display:flex; align-items:center; gap:10px;">
         <span class="canvas-title">AGORA 2D 配置區</span>
+        <button class="btn btn-icon-responsive" style="padding: 4px 9px; font-size: 12px; font-weight: bold; border-color: var(--text-secondary); color: var(--text-secondary);" onclick="openManual()" title="開啟操作說明"><span class="material-icons btn-icon-only" style="font-size:20px;vertical-align:middle;color:var(--text-secondary);">menu_book</span><span class="btn-label-text">📖 操作說明</span></button>
         <button class="btn" style="padding: 4px 12px; font-size: 12px; font-weight: bold; border-color: #3a8a3a; color: #3a8a3a;" onclick="saveProject()" title="將目前配置儲存為 .agora 專案檔">💾 儲存專案</button>
         <label class="btn" style="padding: 4px 12px; font-size: 12px; font-weight: bold; border-color: #3a8a3a; color: #3a8a3a; cursor: pointer; margin: 0;" title="載入先前儲存的 .agora 專案檔">📂 載入專案<input type="file" id="loadProjectInput" accept=".agora" style="display:none;" onchange="loadProject(event)"></label>
       </div>
@@ -4711,5 +4712,1085 @@ function showToast(msg) {
 }
 </script>
 
+
+
+<style>
+/* ══ 使用說明 Drawer 樣式（完整 scoped 到 .manual-wrap） ══ */
+
+/* ── Token 系統：與 AGORA 工具完全一致 ── */
+
+
+.manual-wrap, .manual-wrap *::before, .manual-wrap *::after { box-sizing: border-box; margin: 0; padding: 0; }
+.manual-wrap { scroll-behavior: smooth; }
+
+.manual-wrap {
+  font-family: "Inter", "Microsoft JhengHei", "PingFang TC", sans-serif;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--text-primary);
+  background: var(--bg);
+}
+
+/* ── 版面 ── */
+.manual-wrap .layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+  max-width: 1120px;
+  margin: 0 auto;
+  gap: 12px;
+  padding: 12px;
+}
+
+/* ── 左側導覽（與工具 panel 同款） ── */
+.manual-wrap nav {
+  position: sticky;
+  top: 12px;
+  height: calc(100vh - 24px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.manual-wrap .nav-inner {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.manual-wrap .nav-logo {
+  padding-bottom: 14px;
+  margin-bottom: 10px;
+  border-bottom: 1.5px solid var(--border);
+}
+.manual-wrap .nav-logo .product-tag {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.manual-wrap .nav-logo h1 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.45;
+}
+
+.manual-wrap .nav-group-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 10px 10px 3px;
+}
+.manual-wrap nav a {
+  display: block;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.13s, color 0.13s;
+}
+.manual-wrap nav a:hover { background: var(--accent-light); color: var(--accent); }
+.manual-wrap nav a.active {
+  background: var(--accent-light);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.manual-wrap .nav-footer {
+  padding: 10px 16px 12px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ── 右側主內容 ── */
+.manual-wrap main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Hero 卡（仿工具 canvas-header 風格） ── */
+.manual-wrap .hero {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 28px 32px 26px;
+}
+.manual-wrap .hero .eyebrow {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.manual-wrap .hero h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+  margin-bottom: 10px;
+  letter-spacing: -0.01em;
+}
+.manual-wrap .hero p {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  max-width: 580px;
+  line-height: 1.75;
+  margin-bottom: 18px;
+}
+.manual-wrap .hero-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.manual-wrap .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 500;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── 章節カード ── */
+.manual-wrap .section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 22px 28px 26px;
+  scroll-margin-top: 20px;
+}
+
+.manual-wrap .section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding-bottom: 13px;
+  border-bottom: 1.5px solid var(--border);
+}
+.manual-wrap .section-num {
+  width: 28px; height: 28px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+.manual-wrap .section h2 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+.manual-wrap .section > p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+  max-width: 620px;
+  line-height: 1.75;
+}
+
+/* ── section-title（仿工具小標） ── */
+.manual-wrap .sub-title {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  margin-top: 16px;
+}
+.manual-wrap .sub-title:first-child { margin-top: 0; }
+
+/* ── 步驟列表 ── */
+.manual-wrap .steps {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.manual-wrap .step {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  border-bottom: 1px solid var(--border);
+}
+.manual-wrap .step:last-child { border-bottom: none; }
+.manual-wrap .step-num {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 15px 0;
+  background: var(--surface-2);
+  border-right: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.manual-wrap .step-body { padding: 13px 18px; }
+.manual-wrap .step-body strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+}
+.manual-wrap .step-body p {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+/* ── 功能卡片 ── */
+.manual-wrap .cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.manual-wrap .card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 15px 17px;
+  box-shadow: var(--shadow-sm);
+}
+.manual-wrap .card-icon { font-size: 20px; margin-bottom: 7px; display: block; }
+.manual-wrap .card h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 5px;
+}
+.manual-wrap .card p, .manual-wrap .card li {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+.manual-wrap .card ul { padding-left: 15px; }
+.manual-wrap .card li { margin-bottom: 2px; }
+
+/* ── 表格 ── */
+.manual-wrap .data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  font-size: 12.5px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-sm);
+}
+.manual-wrap .data-table thead th {
+  background: var(--surface-2);
+  padding: 8px 14px;
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+}
+.manual-wrap .data-table td {
+  padding: 9px 14px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.manual-wrap .data-table tr:last-child td { border-bottom: none; }
+.manual-wrap .data-table td:first-child { font-weight: 600; color: var(--text-primary); white-space: nowrap; }
+.manual-wrap .data-table tr:hover td { background: var(--accent-light); }
+
+/* ── 快捷鍵 ── */
+.manual-wrap .shortcut-table {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.manual-wrap .shortcut-row {
+  display: flex;
+  align-items: center;
+  padding: 9px 18px;
+  border-bottom: 1px solid var(--border);
+  gap: 14px;
+}
+.manual-wrap .shortcut-row:last-child { border-bottom: none; }
+.manual-wrap .shortcut-row:hover { background: var(--accent-light); }
+.manual-wrap .key-group {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  min-width: 128px;
+}
+.manual-wrap kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-bottom: 2px solid var(--border-strong);
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
+}
+.manual-wrap .shortcut-desc { font-size: 12.5px; color: var(--text-secondary); }
+
+/* ── 提示框（仿工具 hint 風格） ── */
+.manual-wrap .callout {
+  display: flex;
+  gap: 10px;
+  padding: 11px 15px;
+  border-radius: var(--radius-sm);
+  margin: 12px 0;
+  font-size: 12.5px;
+  line-height: 1.7;
+  box-shadow: var(--shadow-sm);
+}
+.manual-wrap .callout.tip {
+  background: var(--accent-light);
+  border: 1px solid #F0C8B5;
+  color: #7A3010;
+}
+.manual-wrap .callout.warn {
+  background: #FEF6EC;
+  border: 1px solid #F0D4A0;
+  color: #7A4A10;
+}
+.manual-wrap .callout-icon { flex-shrink: 0; font-size: 15px; margin-top: 1px; }
+.manual-wrap .callout p strong { font-weight: 600; }
+
+/* ── 介面示意圖 ── */
+.manual-wrap .ui-diagram {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-sm);
+}
+.manual-wrap .ui-diagram-bar {
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  padding: 7px 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.manual-wrap .ui-diagram-bar::before {
+  content: '';
+  display: inline-block;
+  width: 10px; height: 10px;
+  background: #E2231A;
+  border-radius: 50%;
+  box-shadow: 14px 0 0 #FFCE1B, 28px 0 0 #3A8A3A;
+  flex-shrink: 0;
+}
+.manual-wrap .ui-diagram-body {
+  display: grid;
+  grid-template-columns: 190px 1fr;
+  min-height: 200px;
+}
+.manual-wrap .ui-left {
+  border-right: 1px solid var(--border);
+  padding: 12px 10px;
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.manual-wrap .ui-label {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.manual-wrap .ui-tag {
+  display: inline-block;
+  padding: 3px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin: 2px 2px 0 0;
+  box-shadow: var(--shadow-sm);
+}
+.manual-wrap .ui-tag.active {
+  background: var(--accent-light);
+  border-color: #F0C8B5;
+  color: var(--accent);
+  font-weight: 600;
+}
+.manual-wrap .ui-right {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.manual-wrap .ui-canvas-mock {
+  flex: 1;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  min-height: 90px;
+  position: relative;
+}
+.manual-wrap .ui-canvas-badge {
+  position: absolute;
+  top: 7px; right: 7px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  font-size: 10px;
+  color: var(--text-muted);
+  box-shadow: var(--shadow-sm);
+}
+.manual-wrap .ui-table-mock {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.manual-wrap .ui-table-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border-bottom: 1px solid var(--border);
+  padding: 5px 8px;
+  gap: 4px;
+}
+.manual-wrap .ui-table-row:last-child { border-bottom: none; }
+.manual-wrap .ui-cell { height: 8px; border-radius: 3px; background: var(--border); }
+.manual-wrap .ui-table-row.header .ui-cell { background: var(--border-strong); height: 6px; }
+
+/* ── 行動裝置卡片 ── */
+.manual-wrap .mobile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.manual-wrap .mobile-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+}
+.manual-wrap .mobile-card h4 {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 5px;
+}
+.manual-wrap .mobile-card p { font-size: 12.5px; color: var(--text-secondary); line-height: 1.7; }
+
+/* ── code ── */
+.manual-wrap code {
+  font-family: "SFMono-Regular", "Consolas", monospace;
+  font-size: 11.5px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--accent);
+}
+
+/* ── RWD ── */
+@media (max-width: 900px) {
+  .manual-wrap .layout { grid-template-columns: 1fr; padding: 8px; gap: 8px; }
+  .manual-wrap nav { position: static; height: auto; }
+  .manual-wrap .nav-inner { flex-direction: row; flex-wrap: wrap; gap: 4px; padding: 12px; }
+  .manual-wrap .nav-logo { width: 100%; padding-bottom: 10px; margin-bottom: 4px; }
+  .manual-wrap .nav-group-label { display: none; }
+  .manual-wrap nav a { padding: 4px 10px; font-size: 12px; }
+  .manual-wrap main { gap: 8px; }
+  .manual-wrap .section { padding: 16px 16px 20px; }
+  .manual-wrap .cards { grid-template-columns: 1fr; }
+  .manual-wrap .mobile-grid { grid-template-columns: 1fr; }
+  .manual-wrap .hero h2 { font-size: 20px; }
+  .manual-wrap .ui-diagram-body { grid-template-columns: 1fr; }
+  .manual-wrap .ui-left { border-right: none; border-bottom: 1px solid var(--border); }
+}
+
+/* ── Drawer 內 nav / layout 補正 ── */
+#manual-drawer nav {
+  position: sticky;
+  top: 0;
+  height: auto;
+  max-height: calc(100vh - 50px);
+}
+#manual-drawer .layout {
+  max-width: none;
+  padding: 12px;
+  gap: 12px;
+}
+#manual-drawer .manual-wrap {
+  min-width: 0;
+  width: 100%;
+}
+</style>
+
+
+<!-- ══════════════════════════════════════════
+     使用說明 Drawer
+══════════════════════════════════════════ -->
+<div id="manual-overlay" style="display:none; position:fixed; inset:0; z-index:9999;">
+  <!-- 遮罩 -->
+  <div id="manual-backdrop" onclick="closeManual()"
+       style="position:absolute; inset:0; background:rgba(28,26,24,0.45); backdrop-filter:blur(2px);"></div>
+  <!-- Drawer 本體 -->
+  <div id="manual-drawer"
+       style="position:absolute; top:0; right:0; width:min(1120px,96vw); height:100%;
+              background:var(--bg); box-shadow:-8px 0 32px rgba(0,0,0,0.14);
+              display:flex; flex-direction:column; overflow:hidden;
+              transform:translateX(100%); transition:transform 0.28s cubic-bezier(.4,0,.2,1);">
+    <!-- Drawer 頂部關閉列 -->
+    <div style="display:flex; align-items:center; justify-content:space-between;
+                padding:10px 18px; background:var(--surface);
+                border-bottom:1px solid var(--border); flex-shrink:0; box-shadow:var(--shadow-sm);">
+      <span style="font-size:13px; font-weight:700; color:var(--text-primary); letter-spacing:-0.01em;">📖 操作說明</span>
+      <button onclick="closeManual()"
+              style="background:none; border:1px solid var(--border); border-radius:var(--radius-sm);
+                     padding:3px 10px; font-size:12px; font-weight:600; color:var(--text-secondary);
+                     cursor:pointer; display:flex; align-items:center; gap:4px; transition:background 0.13s;"
+              onmouseover="this.style.background='var(--accent-light)'; this.style.color='var(--accent)'; this.style.borderColor='var(--accent)';"
+              onmouseout="this.style.background='none'; this.style.color='var(--text-secondary)'; this.style.borderColor='var(--border)';">
+        <span class="material-icons" style="font-size:16px; vertical-align:middle;">close</span> 關閉
+      </button>
+    </div>
+    <!-- 手冊內容捲動區 -->
+    <div id="manual-scroll" style="flex:1; overflow-y:auto; padding:0;">
+      <div class="manual-wrap">
+
+
+<div class="layout">
+
+<!-- ── 左側導覽 ── -->
+<nav>
+  <div class="nav-inner">
+    <div class="nav-logo">
+      <div class="product-tag">使用手冊</div>
+      <h1>AGORA 組合沙發<br>平面配置工具</h1>
+    </div>
+
+    <div class="nav-group-label">入門</div>
+    <a href="#start">開啟與介面</a>
+    <a href="#insert">插入模塊</a>
+
+    <div class="nav-group-label">操作</div>
+    <a href="#canvas">畫布操作</a>
+    <a href="#module">模塊操作</a>
+    <a href="#list">配置清單</a>
+
+    <div class="nav-group-label">輸出</div>
+    <a href="#project">儲存與載入</a>
+    <a href="#export">匯出圖片與 CSV</a>
+    <a href="#shortcuts">快捷鍵</a>
+    <a href="#mobile">行動裝置</a>
+  </div>
+  <div class="nav-footer">AGORA 配置工具 Dashboard 版</div>
+</nav>
+
+<!-- ── 主內容 ── -->
+<main>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="eyebrow">使用手冊</div>
+    <h2>AGORA 組合沙發平面配置工具</h2>
+    <p>專為 AGORA 系列組合沙發設計的 2D 配置工具。從選件排列、顏色配置到規格彙整，用瀏覽器開啟即可使用。</p>
+    <div class="hero-badges">
+      <span class="badge">🛋️ 直型・轉角・訂製模塊</span>
+      <span class="badge">🎨 即時選色與布號管理</span>
+      <span class="badge">💾 支援專案儲存</span>
+      <span class="badge">📊 CSV 匯出</span>
+    </div>
+  </div>
+
+  <!-- 1. 開啟與介面 -->
+  <div class="section" id="start">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <h2>開啟與介面概覽</h2>
+    </div>
+    <p>用瀏覽器（建議 Chrome 或 Edge）開啟工具頁面即可使用，介面分為左側模塊面板、中央配置畫布與底部清單三個區域。</p>
+
+    <div class="ui-diagram">
+      <div class="ui-diagram-bar">AGORA 組合沙發平面配置工具</div>
+      <div class="ui-diagram-body">
+        <div class="ui-left">
+          <div>
+            <div class="ui-label">模塊面板</div>
+            <span class="ui-tag active">直型</span>
+            <span class="ui-tag">轉角</span>
+            <span class="ui-tag">其他</span>
+            <span class="ui-tag">訂製</span>
+          </div>
+          <div>
+            <div class="ui-label">工具</div>
+            <span class="ui-tag">↺ 旋轉</span>
+            <span class="ui-tag">⧉ 複製</span>
+            <span class="ui-tag">✕ 刪除</span>
+          </div>
+          <div>
+            <span class="ui-tag">☑ 多選模式</span>
+            <span class="ui-tag">清空配置</span>
+          </div>
+        </div>
+        <div class="ui-right">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
+            <div style="display:flex; gap:5px;">
+              <span style="padding:3px 9px; background:var(--surface-2); border:1px solid var(--border); border-radius:6px; font-size:11px; color:#3a8a3a; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.04);">💾 儲存專案</span>
+              <span style="padding:3px 9px; background:var(--surface-2); border:1px solid var(--border); border-radius:6px; font-size:11px; color:#3a8a3a; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.04);">📂 載入專案</span>
+            </div>
+            <span style="padding:3px 9px; background:var(--accent-light); border:1px solid #F0C8B5; border-radius:6px; font-size:11px; color:var(--accent); font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.04);">📷 擷取配置圖</span>
+          </div>
+          <div class="ui-canvas-mock">
+            2D 配置畫布
+            <div class="ui-canvas-badge">－ 100% ＋ ｜ 置中 ｜ 重置</div>
+          </div>
+          <div class="ui-table-mock">
+            <div class="ui-table-row header">
+              <div class="ui-cell"></div><div class="ui-cell"></div><div class="ui-cell"></div><div class="ui-cell"></div><div class="ui-cell"></div>
+            </div>
+            <div class="ui-table-row">
+              <div class="ui-cell" style="background:#F0C8B5;"></div><div class="ui-cell"></div><div class="ui-cell"></div><div class="ui-cell"></div><div class="ui-cell"></div>
+            </div>
+            <div class="ui-table-row">
+              <div class="ui-cell"></div><div class="ui-cell"></div><div class="ui-cell"></div><div class="ui-cell"></div><div class="ui-cell"></div>
+            </div>
+          </div>
+          <div style="font-size:10px; color:var(--text-muted); text-align:right;">配置清單（含匯出 CSV）</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <span class="card-icon">🖥️</span>
+        <h3>左側面板</h3>
+        <p>選擇並插入模塊、執行旋轉、複製、刪除等操作。螢幕較小時可縮合。</p>
+      </div>
+      <div class="card">
+        <span class="card-icon">🎨</span>
+        <h3>中央畫布</h3>
+        <p>2D 平面配置工作區。模塊可自由拖曳、排列、旋轉。</p>
+      </div>
+      <div class="card">
+        <span class="card-icon">📋</span>
+        <h3>配置清單</h3>
+        <p>即時同步所有模塊的型號、規格、顏色、數量，可彙整並匯出 CSV。</p>
+      </div>
+      <div class="card">
+        <span class="card-icon">💾</span>
+        <h3>頂部工具列</h3>
+        <p>專案儲存 / 載入、擷取配置圖，以及畫布縮放控制。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. 插入模塊 -->
+  <div class="section" id="insert">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <h2>插入模塊</h2>
+    </div>
+    <p>左側面板「➕ 插入模塊」提供四種分頁，點選分頁標籤切換。</p>
+
+    <table class="data-table">
+      <thead>
+        <tr><th>分頁</th><th>內容</th><th>操作方式</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>直型</td>
+          <td>公版直型沙發模塊（含縮圖預覽）</td>
+          <td>從下拉選單選擇 → 點「插入直型模塊」</td>
+        </tr>
+        <tr>
+          <td>轉角</td>
+          <td>轉角組合模塊</td>
+          <td>從下拉選單選擇 → 點「插入轉角模塊」</td>
+        </tr>
+        <tr>
+          <td>其他</td>
+          <td>腳凳等附件型模塊</td>
+          <td>從下拉選單選擇 → 點「插入其他模塊」</td>
+        </tr>
+        <tr>
+          <td>訂製</td>
+          <td>非標準尺寸直型沙發</td>
+          <td>輸入寬度與椅背款式 → 點「插入訂製直型模塊」</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="sub-title">訂製直型模塊設定</div>
+    <div class="card" style="margin-bottom:12px;">
+      <ul>
+        <li><strong>寬度</strong>：200 – 9999 mm（步進 10 mm），Enter 可快速插入</li>
+        <li><strong>椅背款式</strong>：SBS 有椅背 ／ NBS 無椅背 ／ RBS 右扶手 ／ LBS 左扶手</li>
+        <li><strong>即時預覽</strong>：下方預覽框隨輸入即時更新俯視圖</li>
+      </ul>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-icon">💡</span>
+      <p><strong>自動轉公版：</strong>訂製模塊若寬度填入 700 mm 或 1400 mm，且椅背款式符合既有規格，系統會自動改為對應的公版型號，並跳出提示通知。</p>
+    </div>
+  </div>
+
+  <!-- 3. 畫布操作 -->
+  <div class="section" id="canvas">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <h2>畫布操作</h2>
+    </div>
+
+    <table class="data-table">
+      <thead>
+        <tr><th>動作</th><th>操作方式</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>縮放</td><td>右上角「－ ／ ＋」按鈕（每次 10%），或滑鼠滾輪</td></tr>
+        <tr><td>平移</td><td>在空白畫布區按住左鍵拖曳</td></tr>
+        <tr><td>模塊置中</td><td>點「模塊置中」，將所有模塊移至畫布中央</td></tr>
+        <tr><td>重置視角</td><td>點「重置」，恢復 100% 縮放與預設位置</td></tr>
+        <tr><td>框選多個模塊</td><td>在空白區域按住左鍵拖曳，放開後框選範圍內模塊全部選取</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 4. 模塊操作 -->
+  <div class="section" id="module">
+    <div class="section-header">
+      <div class="section-num">4</div>
+      <h2>模塊操作</h2>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">選取</div>
+        <div class="step-body">
+          <strong>單擊模塊</strong>
+          <p>選取後顯示橙色邊框。點擊空白處取消選取。按 <kbd>Esc</kbd> 清除所有選取。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">移動</div>
+        <div class="step-body">
+          <strong>拖曳模塊</strong>
+          <p>選取後直接拖曳到目標位置即可。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">旋轉</div>
+        <div class="step-body">
+          <strong>使用左側面板旋轉按鈕</strong>
+          <p>提供 15°、45° 逆時針 / 順時針，以及 180° 翻轉。選取模塊後執行。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">複製</div>
+        <div class="step-body">
+          <strong>「⧉ 複製選取」或 Ctrl+D</strong>
+          <p>複製內容包含顏色、布號、備註、插座數量。複製件會自動偏移到空白位置。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">刪除</div>
+        <div class="step-body">
+          <strong>「✕ 刪除選取」或 Delete / Backspace</strong>
+          <p>移除目前選取的模塊（可多選後一次刪除）。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">多選</div>
+        <div class="step-body">
+          <strong>「☑ 多選模式」（適用 iPad / 觸控）</strong>
+          <p>開啟後每次點擊模塊會累積加選；再次點擊已選取的模塊則取消。多選後可對整組執行旋轉、複製或刪除。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. 配置清單 -->
+  <div class="section" id="list">
+    <div class="section-header">
+      <div class="section-num">5</div>
+      <h2>配置清單</h2>
+    </div>
+    <p>畫布下方表格即時同步所有模塊資訊，可直接在清單中設定顏色與備註。</p>
+
+    <table class="data-table">
+      <thead>
+        <tr><th>欄位</th><th>說明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>模塊名稱</td><td>型號對應的中文名稱</td></tr>
+        <tr><td>型號</td><td>公版料號或訂製識別碼</td></tr>
+        <tr><td>規格 (mm)</td><td>寬 × 深 × 高</td></tr>
+        <tr><td>數量</td><td>相同型號的件數（彙整模式下合併計算）</td></tr>
+        <tr><td>椅背顏色</td><td>色票選色 + 布號輸入框，選色後俯視圖即時更新</td></tr>
+        <tr><td>坐墊顏色</td><td>色票選色 + 布號輸入框，操作方式同上</td></tr>
+        <tr><td>加購插座組</td><td>輸入數量，非零時模塊顯示黃色外框提示</td></tr>
+        <tr><td>屏風</td><td>勾選是否加購屏風，並可選擇內外側顏色</td></tr>
+        <tr><td>註記</td><td>自由輸入文字備注</td></tr>
+      </tbody>
+    </table>
+
+    <div class="cards">
+      <div class="card">
+        <span class="card-icon">🎨</span>
+        <h3>選色功能</h3>
+        <ul>
+          <li>點色票按鈕開啟色板（4 欄格狀）</li>
+          <li>「自訂色」展開 HSL 滑桿精細調色</li>
+          <li>支援吸管工具（需 Chrome 瀏覽器）</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="card-icon">🧮</span>
+        <h3>彙整型號</h3>
+        <p>點「🧮 彙整型號」將相同型號合併為一列並顯示合計數量，方便製作報價清單。再次點擊即恢復逐件顯示。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. 儲存與載入 -->
+  <div class="section" id="project">
+    <div class="section-header">
+      <div class="section-num">6</div>
+      <h2>專案儲存與載入</h2>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">存</div>
+        <div class="step-body">
+          <strong>💾 儲存專案</strong>
+          <p>將目前全部配置（模塊位置、旋轉角度、顏色、布號、備註、插座等）匯出為 <code>.agora</code> 檔案，可備份或分享。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">載</div>
+        <div class="step-body">
+          <strong>📂 載入專案</strong>
+          <p>選取先前儲存的 <code>.agora</code> 檔案，還原所有配置。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-icon">⚠️</span>
+      <p><strong>注意：</strong>載入專案會覆蓋目前畫布上的所有內容。若有未儲存的配置，請先執行「儲存專案」再載入。</p>
+    </div>
+  </div>
+
+  <!-- 7. 匯出 -->
+  <div class="section" id="export">
+    <div class="section-header">
+      <div class="section-num">7</div>
+      <h2>匯出圖片與 CSV</h2>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <span class="card-icon">📷</span>
+        <h3>擷取配置圖（PNG）</h3>
+        <p>點頂部「📷 擷取配置圖」，截取目前畫布並自動下載為 <code>.png</code>。圖片包含所有模塊與顏色，可直接附於提案文件。</p>
+      </div>
+      <div class="card">
+        <span class="card-icon">📁</span>
+        <h3>匯出 CSV</h3>
+        <p>點清單區「📁 匯出 CSV」，將型號、規格、顏色、布號、數量、備註匯出為 <code>.csv</code>，可直接用 Excel 開啟。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. 快捷鍵 -->
+  <div class="section" id="shortcuts">
+    <div class="section-header">
+      <div class="section-num">8</div>
+      <h2>快捷鍵</h2>
+    </div>
+
+    <div class="shortcut-table">
+      <div class="shortcut-row">
+        <div class="key-group"><kbd>Ctrl</kbd><kbd>D</kbd></div>
+        <div class="shortcut-desc">複製選取的模塊（含顏色、布號、備註）</div>
+      </div>
+      <div class="shortcut-row">
+        <div class="key-group"><kbd>Delete</kbd></div>
+        <div class="shortcut-desc">刪除選取的模塊</div>
+      </div>
+      <div class="shortcut-row">
+        <div class="key-group"><kbd>Backspace</kbd></div>
+        <div class="shortcut-desc">刪除選取的模塊（同上）</div>
+      </div>
+      <div class="shortcut-row">
+        <div class="key-group"><kbd>Esc</kbd></div>
+        <div class="shortcut-desc">清除所有選取</div>
+      </div>
+      <div class="shortcut-row">
+        <div class="key-group"><kbd>Enter</kbd></div>
+        <div class="shortcut-desc">在訂製寬度輸入框中快速插入模塊</div>
+      </div>
+      <div class="shortcut-row">
+        <div class="key-group" style="font-size:12px; color:var(--text-secondary); padding-top:2px;">滾輪</div>
+        <div class="shortcut-desc">畫布縮放</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 9. 行動裝置 -->
+  <div class="section" id="mobile">
+    <div class="section-header">
+      <div class="section-num">9</div>
+      <h2>行動裝置使用</h2>
+    </div>
+    <p>螢幕寬度小於 900px（iPad、手機）時，介面自動切換為響應式版面。</p>
+
+    <div class="mobile-grid">
+      <div class="mobile-card">
+        <h4>☰ 模塊選單</h4>
+        <p>左側面板收合，點左上角漢堡按鈕展開；點選遮罩或「✕ 關閉」收起。</p>
+      </div>
+      <div class="mobile-card">
+        <h4>觸控拖曳</h4>
+        <p>支援單指拖曳模塊移動；畫布縮放控制仍顯示於右上角。</p>
+      </div>
+      <div class="mobile-card">
+        <h4>多選模式</h4>
+        <p>建議開啟「☑ 多選模式」以方便觸控累積選取多個模塊。</p>
+      </div>
+      <div class="mobile-card">
+        <h4>配置清單</h4>
+        <p>清單可橫向捲動查看所有欄位，高度自適應螢幕。</p>
+      </div>
+    </div>
+
+    <div class="callout tip" style="margin-top:12px;">
+      <span class="callout-icon">💡</span>
+      <p><strong>吸管工具：</strong>需要瀏覽器支援 EyeDropper API，建議使用桌面版 Chrome 或 Edge，iOS Safari 目前不支援此功能。</p>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<script>
+const sections = document.querySelectorAll('.section[id]');
+const navLinks = document.querySelectorAll('nav a');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting)
+      navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id));
+  });
+}, { rootMargin: '-15% 0px -70% 0px' });
+sections.forEach(s => observer.observe(s));
+</script>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+
+function openManual() {
+  var overlay = document.getElementById('manual-overlay');
+  var drawer  = document.getElementById('manual-drawer');
+  overlay.style.display = 'block';
+  // 強制 reflow 後再加 transform，讓 transition 生效
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      drawer.style.transform = 'translateX(0)';
+    });
+  });
+  document.body.style.overflow = 'hidden';
+}
+
+function closeManual() {
+  var drawer = document.getElementById('manual-drawer');
+  drawer.style.transform = 'translateX(100%)';
+  drawer.addEventListener('transitionend', function handler() {
+    document.getElementById('manual-overlay').style.display = 'none';
+    document.body.style.overflow = '';
+    drawer.removeEventListener('transitionend', handler);
+  });
+}
+
+// ESC 關閉
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeManual();
+});
+
+// 使用說明導覽高亮（IIFE 隔離，避免與工具變數衝突）
+;(function() {
+  var manualSections = document.querySelectorAll('#manual-drawer .section[id]');
+  var manualNavLinks = document.querySelectorAll('#manual-drawer nav a');
+  var manualObserver = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) {
+      if (e.isIntersecting)
+        manualNavLinks.forEach(function(a) {
+          a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id);
+        });
+    });
+  }, { root: document.getElementById('manual-scroll'), rootMargin: '-15% 0px -70% 0px' });
+  manualSections.forEach(function(s) { manualObserver.observe(s); });
+})();
+
+</script>
 </body>
 </html>
