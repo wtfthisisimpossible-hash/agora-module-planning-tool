@@ -967,6 +967,55 @@ tr.multi-selected-row td {
   .socket-qty-input { width: 40px; }
 }
 
+/* ── 空間圖塊樣式 ── */
+.space-block {
+  position: absolute;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  box-sizing: border-box;
+  border: 2px dashed #555;
+  background: transparent;
+  pointer-events: auto;
+}
+.space-block:active { cursor: grabbing; }
+.space-block.selected-space::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border: 2.5px solid var(--accent);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 10;
+}
+.space-block.locked {
+  cursor: not-allowed;
+  border-color: #888;
+  opacity: 0.7;
+}
+.space-block.locked::before {
+  content: '🔒';
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  pointer-events: none;
+  z-index: 5;
+}
+.space-block-label {
+  position: absolute;
+  bottom: 3px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #444;
+  pointer-events: none;
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+}
+
 /* 吐司通知樣式 */
 .toast {
   position: fixed;
@@ -1015,6 +1064,7 @@ tr.multi-selected-row td {
           <div class="insert-tab" id="itab-corner" onclick="switchInsertTab('corner')">轉角</div>
           <div class="insert-tab" id="itab-other" onclick="switchInsertTab('other')">其他</div>
           <div class="insert-tab" id="itab-custom" onclick="switchInsertTab('custom')">訂製</div>
+          <div class="insert-tab" id="itab-space" onclick="switchInsertTab('space')">空間</div>
         </div>
 
         <!-- 直型 -->
@@ -1083,7 +1133,35 @@ tr.multi-selected-row td {
           <p class="hint" id="custom-preview-label" style="font-size:11px; color:#777; text-align:center;">寬度：1000mm｜深度：700mm</p>
           <button class="btn" onclick="insertCustomStraightModule()">插入訂製直型模塊</button>
         </div>
+        <!-- 空間圖塊 -->
+        <div class="insert-panel" id="ipanel-space">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <label style="font-size:12px; color:var(--text-secondary); white-space:nowrap;">寬度 (mm)</label>
+            <input type="number" id="space-width-input" value="1000" min="100" max="99999" step="100"
+              style="width:80px; padding:5px 7px; border:1px solid var(--border-strong); border-radius:5px; font-size:13px; background:var(--surface); color:var(--text-primary); outline:none;">
+            <span style="font-size:12px; color:var(--text-secondary);">mm</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <label style="font-size:12px; color:var(--text-secondary); white-space:nowrap;">深度 (mm)</label>
+            <input type="number" id="space-height-input" value="1000" min="100" max="99999" step="100"
+              style="width:80px; padding:5px 7px; border:1px solid var(--border-strong); border-radius:5px; font-size:13px; background:var(--surface); color:var(--text-primary); outline:none;">
+            <span style="font-size:12px; color:var(--text-secondary);">mm</span>
+          </div>
+          <button class="btn" onclick="insertSpaceBlock()">插入空間圖塊</button>
+          <p class="hint">空間圖塊為虛線外框，不計入配置清單。可鎖定後防止誤移。</p>
+        </div>
       </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="section">
+      <div class="section-title">空間圖塊</div>
+      <div class="btn-row">
+        <button class="btn" id="lock-space-btn" onclick="toggleLockSelectedSpace()">🔒 鎖定選取</button>
+        <button class="btn btn-danger" onclick="deleteSelectedSpace()">✕ 刪除圖塊</button>
+      </div>
+      <p class="hint">鎖定後無法選取或移動，再次點擊解鎖。</p>
     </div>
 
     <hr class="divider">
@@ -1990,7 +2068,7 @@ function toggleInsertGroup() {
   document.getElementById('insert-group').classList.toggle('open');
 }
 function switchInsertTab(tab) {
-  ['straight','corner','other','custom'].forEach(t => {
+  ['straight','corner','other','custom','space'].forEach(t => {
     document.getElementById('itab-' + t).classList.toggle('active', t === tab);
     document.getElementById('ipanel-' + t).classList.toggle('active', t === tab);
   });
@@ -2576,6 +2654,7 @@ function handleCanvasClick(e) {
   // 點擊畫布空白處：取消所有選取（含多選）
   clearMultiSelection();
   selectModule(null);
+  selectSpaceBlock(null);
 }
 
 // ==========================================
@@ -2803,6 +2882,14 @@ function clearCanvas() {
     modules = [];
     selectedUid = null;
     clearMultiSelection();
+    // 一併清除空間圖塊
+    spaceBlocks.forEach(sb => {
+      const el = document.getElementById(`space-${sb.uid}`);
+      if (el) el.remove();
+    });
+    spaceBlocks = [];
+    selectedSpaceUid = null;
+    updateLockBtn();
     renderTable();
     updateEmptyHint();
     showToast("已清空配置畫布");
@@ -4697,6 +4784,166 @@ function closePanelDrawer() {
   document.getElementById('panel').classList.remove('panel-open');
   document.getElementById('panel-overlay').classList.remove('overlay-show');
   document.body.style.overflow = '';
+}
+
+// ==========================================
+// 空間圖塊（Space Block）功能
+// ==========================================
+let spaceBlocks = [];      // { uid, widthMm, heightMm, x, y, locked }
+let selectedSpaceUid = null;
+
+function insertSpaceBlock() {
+  const wMm = Math.max(100, parseInt(document.getElementById('space-width-input').value) || 1000);
+  const hMm = Math.max(100, parseInt(document.getElementById('space-height-input').value) || 1000);
+  const wPx = wMm * SCALE;
+  const hPx = hMm * SCALE;
+
+  const canvasEl = document.getElementById('canvas');
+  const cx = (canvasEl.clientWidth / 2 - panX) / canvasZoom;
+  const cy = (canvasEl.clientHeight / 2 - panY) / canvasZoom;
+
+  const uid = Date.now() + Math.floor(Math.random() * 999) + 90000000;
+  const sb = {
+    uid,
+    widthMm: wMm,
+    heightMm: hMm,
+    x: cx - wPx / 2,
+    y: cy - hPx / 2,
+    locked: false
+  };
+  spaceBlocks.push(sb);
+  renderSpaceBlockDOM(sb);
+  selectSpaceBlock(uid);
+  updateEmptyHint();
+  showToast(`已插入空間圖塊 ${wMm}×${hMm}mm`);
+}
+
+function renderSpaceBlockDOM(sb) {
+  const viewport = document.getElementById('canvas-viewport');
+  const div = document.createElement('div');
+  div.className = 'space-block';
+  div.id = `space-${sb.uid}`;
+  div.style.width  = `${sb.widthMm  * SCALE}px`;
+  div.style.height = `${sb.heightMm * SCALE}px`;
+  div.style.left   = `${sb.x}px`;
+  div.style.top    = `${sb.y}px`;
+  if (sb.locked) div.classList.add('locked');
+
+  // 尺寸標籤
+  const label = document.createElement('div');
+  label.className = 'space-block-label';
+  label.id = `space-label-${sb.uid}`;
+  label.textContent = `${sb.widthMm} × ${sb.heightMm}`;
+  div.appendChild(label);
+
+  div.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+    if (sb.locked) return;
+    selectSpaceBlock(sb.uid);
+    startSpaceDrag(e, sb);
+  });
+  div.addEventListener('click', (e) => e.stopPropagation());
+  div.addEventListener('touchstart', (e) => {
+    e.stopPropagation();
+    if (sb.locked) return;
+    selectSpaceBlock(sb.uid);
+    startSpaceDrag(e.touches[0], sb);
+  }, { passive: true });
+
+  viewport.appendChild(div);
+}
+
+function updateSpaceBlockDOM(sb) {
+  const div = document.getElementById(`space-${sb.uid}`);
+  if (!div) return;
+  div.style.left = `${sb.x}px`;
+  div.style.top  = `${sb.y}px`;
+}
+
+function selectSpaceBlock(uid) {
+  // 取消沙發模塊選取
+  if (selectedUid !== null) {
+    const prevDiv = document.getElementById(`mod-${selectedUid}`);
+    if (prevDiv) prevDiv.classList.remove('selected');
+    selectedUid = null;
+  }
+  clearMultiSelection();
+
+  // 取消舊空間圖塊選取
+  if (selectedSpaceUid !== null) {
+    const old = document.getElementById(`space-${selectedSpaceUid}`);
+    if (old) old.classList.remove('selected-space');
+  }
+  selectedSpaceUid = uid;
+  if (uid !== null) {
+    const el = document.getElementById(`space-${uid}`);
+    if (el) el.classList.add('selected-space');
+  }
+  updateLockBtn();
+}
+
+function updateLockBtn() {
+  const btn = document.getElementById('lock-space-btn');
+  if (!btn) return;
+  if (selectedSpaceUid === null) {
+    btn.textContent = '🔒 鎖定選取';
+    return;
+  }
+  const sb = spaceBlocks.find(s => s.uid === selectedSpaceUid);
+  btn.textContent = sb && sb.locked ? '🔓 解鎖圖塊' : '🔒 鎖定選取';
+}
+
+function toggleLockSelectedSpace() {
+  if (selectedSpaceUid === null) { showToast('請先選取空間圖塊'); return; }
+  const sb = spaceBlocks.find(s => s.uid === selectedSpaceUid);
+  if (!sb) return;
+  sb.locked = !sb.locked;
+  const div = document.getElementById(`space-${sb.uid}`);
+  if (div) div.classList.toggle('locked', sb.locked);
+  // 鎖定後清除選取（鎖定狀態下不可再選取）
+  if (sb.locked) {
+    div.classList.remove('selected-space');
+    selectedSpaceUid = null;
+  }
+  updateLockBtn();
+  showToast(sb.locked ? '空間圖塊已鎖定' : '空間圖塊已解鎖');
+}
+
+function deleteSelectedSpace() {
+  if (selectedSpaceUid === null) { showToast('請先選取空間圖塊'); return; }
+  const div = document.getElementById(`space-${selectedSpaceUid}`);
+  if (div) div.remove();
+  spaceBlocks = spaceBlocks.filter(s => s.uid !== selectedSpaceUid);
+  selectedSpaceUid = null;
+  updateLockBtn();
+  updateEmptyHint();
+  showToast('已刪除空間圖塊');
+}
+
+function startSpaceDrag(e, sb) {
+  const startX = e.clientX;
+  const startY = e.clientY;
+  const origX  = sb.x;
+  const origY  = sb.y;
+
+  const moveHandler = (ev) => {
+    const cx = ev.clientX !== undefined ? ev.clientX : ev.touches[0].clientX;
+    const cy = ev.clientY !== undefined ? ev.clientY : ev.touches[0].clientY;
+    sb.x = origX + (cx - startX) / canvasZoom;
+    sb.y = origY + (cy - startY) / canvasZoom;
+    updateSpaceBlockDOM(sb);
+  };
+  const upHandler = () => {
+    skipNextCanvasClick = true;
+    document.removeEventListener('mousemove', moveHandler);
+    document.removeEventListener('mouseup',   upHandler);
+    document.removeEventListener('touchmove', moveHandler);
+    document.removeEventListener('touchend',  upHandler);
+  };
+  document.addEventListener('mousemove', moveHandler);
+  document.addEventListener('mouseup',   upHandler);
+  document.addEventListener('touchmove', moveHandler, { passive: false });
+  document.addEventListener('touchend',  upHandler);
 }
 
 // ==========================================
