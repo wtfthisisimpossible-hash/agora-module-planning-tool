@@ -1063,6 +1063,36 @@ tr.multi-selected-row td {
     <button id="panel-close" onclick="closePanelDrawer()">✕ 關閉</button>
     <div class="panel-title">Agora沙發模塊</div>
 
+    <!-- ── 空間圖塊卡片 ── -->
+    <div class="insert-group open" id="space-group">
+      <div class="insert-group-header" onclick="toggleSpaceGroup()">
+        <span>⬜ 空間圖塊</span>
+        <span class="ig-arrow">▼</span>
+      </div>
+      <div class="insert-group-body" style="padding:10px 12px; gap:7px;">
+        <div style="display:flex; align-items:center; gap:6px;">
+          <label style="font-size:12px; color:var(--text-secondary); white-space:nowrap; width:36px;">寬度</label>
+          <input type="number" id="space-width-input" value="1000" min="100" max="99999" step="100"
+            style="width:72px; padding:5px 7px; border:1px solid var(--border-strong); border-radius:5px; font-size:13px; background:var(--surface); color:var(--text-primary); outline:none;">
+          <span style="font-size:12px; color:var(--text-secondary);">mm</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <label style="font-size:12px; color:var(--text-secondary); white-space:nowrap; width:36px;">深度</label>
+          <input type="number" id="space-height-input" value="1000" min="100" max="99999" step="100"
+            style="width:72px; padding:5px 7px; border:1px solid var(--border-strong); border-radius:5px; font-size:13px; background:var(--surface); color:var(--text-primary); outline:none;">
+          <span style="font-size:12px; color:var(--text-secondary);">mm</span>
+        </div>
+        <button class="btn" onclick="insertSpaceBlock()">插入空間圖塊</button>
+        <div class="btn-row" style="margin-top:2px;">
+          <button class="btn" id="lock-space-btn" onclick="toggleLockSelectedSpace()">🔒 鎖定選取</button>
+          <button class="btn btn-danger" onclick="deleteSelectedSpace()">✕ 刪除圖塊</button>
+        </div>
+        <p class="hint" style="margin:0;">虛線框，不計入配置清單。鎖定後無法拖動但仍可點選，再次點擊解鎖。</p>
+      </div>
+    </div>
+
+    <hr class="divider">
+
     <!-- ── 插入模塊收合群組 ── -->
     <div class="insert-group open" id="insert-group">
       <div class="insert-group-header" onclick="toggleInsertGroup()">
@@ -1076,7 +1106,6 @@ tr.multi-selected-row td {
           <div class="insert-tab" id="itab-corner" onclick="switchInsertTab('corner')">轉角</div>
           <div class="insert-tab" id="itab-other" onclick="switchInsertTab('other')">其他</div>
           <div class="insert-tab" id="itab-custom" onclick="switchInsertTab('custom')">訂製</div>
-          <div class="insert-tab" id="itab-space" onclick="switchInsertTab('space')">空間</div>
         </div>
 
         <!-- 直型 -->
@@ -1145,35 +1174,7 @@ tr.multi-selected-row td {
           <p class="hint" id="custom-preview-label" style="font-size:11px; color:#777; text-align:center;">寬度：1000mm｜深度：700mm</p>
           <button class="btn" onclick="insertCustomStraightModule()">插入訂製直型模塊</button>
         </div>
-        <!-- 空間圖塊 -->
-        <div class="insert-panel" id="ipanel-space">
-          <div style="display:flex; align-items:center; gap:6px;">
-            <label style="font-size:12px; color:var(--text-secondary); white-space:nowrap;">寬度 (mm)</label>
-            <input type="number" id="space-width-input" value="1000" min="100" max="99999" step="100"
-              style="width:80px; padding:5px 7px; border:1px solid var(--border-strong); border-radius:5px; font-size:13px; background:var(--surface); color:var(--text-primary); outline:none;">
-            <span style="font-size:12px; color:var(--text-secondary);">mm</span>
-          </div>
-          <div style="display:flex; align-items:center; gap:6px;">
-            <label style="font-size:12px; color:var(--text-secondary); white-space:nowrap;">深度 (mm)</label>
-            <input type="number" id="space-height-input" value="1000" min="100" max="99999" step="100"
-              style="width:80px; padding:5px 7px; border:1px solid var(--border-strong); border-radius:5px; font-size:13px; background:var(--surface); color:var(--text-primary); outline:none;">
-            <span style="font-size:12px; color:var(--text-secondary);">mm</span>
-          </div>
-          <button class="btn" onclick="insertSpaceBlock()">插入空間圖塊</button>
-          <p class="hint">空間圖塊為虛線外框，不計入配置清單。可鎖定後防止誤移。</p>
-        </div>
       </div>
-    </div>
-
-    <hr class="divider">
-
-    <div class="section">
-      <div class="section-title">空間圖塊</div>
-      <div class="btn-row">
-        <button class="btn" id="lock-space-btn" onclick="toggleLockSelectedSpace()">🔒 鎖定選取</button>
-        <button class="btn btn-danger" onclick="deleteSelectedSpace()">✕ 刪除圖塊</button>
-      </div>
-      <p class="hint">鎖定後無法選取或移動，再次點擊解鎖。</p>
     </div>
 
     <hr class="divider">
@@ -2080,8 +2081,11 @@ function initSelectData(type) {
 function toggleInsertGroup() {
   document.getElementById('insert-group').classList.toggle('open');
 }
+function toggleSpaceGroup() {
+  document.getElementById('space-group').classList.toggle('open');
+}
 function switchInsertTab(tab) {
-  ['straight','corner','other','custom','space'].forEach(t => {
+  ['straight','corner','other','custom'].forEach(t => {
     document.getElementById('itab-' + t).classList.toggle('active', t === tab);
     document.getElementById('ipanel-' + t).classList.toggle('active', t === tab);
   });
@@ -5246,15 +5250,15 @@ function renderSpaceBlockDOM(sb) {
 
   div.addEventListener('mousedown', (e) => {
     e.stopPropagation();
-    if (sb.locked) return;
-    selectSpaceBlock(sb.uid);
+    selectSpaceBlock(sb.uid);      // 鎖定也可選取
+    if (sb.locked) return;         // 鎖定時不拖動
     startSpaceDrag(e, sb);
   });
   div.addEventListener('click', (e) => e.stopPropagation());
   div.addEventListener('touchstart', (e) => {
     e.stopPropagation();
-    if (sb.locked) return;
-    selectSpaceBlock(sb.uid);
+    selectSpaceBlock(sb.uid);      // 鎖定也可選取
+    if (sb.locked) return;         // 鎖定時不拖動
     startSpaceDrag(e.touches[0], sb);
   }, { passive: true });
 
@@ -5307,11 +5311,10 @@ function toggleLockSelectedSpace() {
   if (!sb) return;
   sb.locked = !sb.locked;
   const div = document.getElementById(`space-${sb.uid}`);
-  if (div) div.classList.toggle('locked', sb.locked);
-  // 鎖定後清除選取（鎖定狀態下不可再選取）
-  if (sb.locked) {
-    div.classList.remove('selected-space');
-    selectedSpaceUid = null;
+  if (div) {
+    div.classList.toggle('locked', sb.locked);
+    // 鎖定時改為 not-allowed cursor，解鎖恢復 grab
+    div.style.cursor = sb.locked ? 'not-allowed' : '';
   }
   updateLockBtn();
   showToast(sb.locked ? '空間圖塊已鎖定' : '空間圖塊已解鎖');
@@ -5984,6 +5987,8 @@ function showToast(msg) {
     <div class="nav-group-label">操作</div>
     <a href="#canvas">畫布操作</a>
     <a href="#module">模塊操作</a>
+    <a href="#space">空間圖塊</a>
+    <a href="#annotate">自動標注</a>
     <a href="#list">配置清單</a>
 
     <div class="nav-group-label">輸出</div>
@@ -6005,6 +6010,8 @@ function showToast(msg) {
     <p>專為 AGORA 系列組合沙發設計的 2D 配置工具。從選件排列、顏色配置到規格彙整，用瀏覽器開啟即可使用。</p>
     <div class="hero-badges">
       <span class="badge">🛋️ 直型・轉角・訂製模塊</span>
+      <span class="badge">⬜ 空間圖塊（可鎖定）</span>
+      <span class="badge">📐 沙發組自動尺寸標注</span>
       <span class="badge">🎨 即時選色與布號管理</span>
       <span class="badge">💾 支援專案儲存</span>
       <span class="badge">📊 CSV 匯出</span>
@@ -6024,7 +6031,13 @@ function showToast(msg) {
       <div class="ui-diagram-body">
         <div class="ui-left">
           <div>
-            <div class="ui-label">模塊面板</div>
+            <div class="ui-label">⬜ 空間圖塊</div>
+            <span class="ui-tag">插入</span>
+            <span class="ui-tag">🔒 鎖定</span>
+            <span class="ui-tag">✕ 刪除</span>
+          </div>
+          <div>
+            <div class="ui-label">➕ 插入模塊</div>
             <span class="ui-tag active">直型</span>
             <span class="ui-tag">轉角</span>
             <span class="ui-tag">其他</span>
@@ -6161,6 +6174,7 @@ function showToast(msg) {
         <tr><td>模塊置中</td><td>點「模塊置中」，將所有模塊移至畫布中央</td></tr>
         <tr><td>重置視角</td><td>點「重置」，恢復 100% 縮放與預設位置</td></tr>
         <tr><td>框選多個模塊</td><td>在空白區域按住左鍵拖曳，放開後框選範圍內模塊全部選取</td></tr>
+        <tr><td>自動標注</td><td>右上角「自動標注」按鈕（位於「－」左側）；按一次自動掃描所有吸附在一起的沙發組並標出總長與總寬，再按一次清除所有標注</td></tr>
       </tbody>
     </table>
   </div>
@@ -6218,10 +6232,88 @@ function showToast(msg) {
     </div>
   </div>
 
-  <!-- 5. 配置清單 -->
-  <div class="section" id="list">
+  <!-- 5. 空間圖塊 -->
+  <div class="section" id="space">
     <div class="section-header">
       <div class="section-num">5</div>
+      <h2>空間圖塊</h2>
+    </div>
+    <p>「空間圖塊」是無填滿的深灰虛線框，用來標示空間範圍或留空區域，不會出現在配置清單中。左側面板中「⬜ 空間圖塊」為獨立卡片，位於「➕ 插入模塊」上方，可點擊標題列收合。</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">插入</div>
+        <div class="step-body">
+          <strong>左側面板「⬜ 空間圖塊」卡片</strong>
+          <p>輸入寬度與深度（mm）後點「插入空間圖塊」，圖塊會出現在畫布中央，框內顯示長 × 寬尺寸。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">移動</div>
+        <div class="step-body">
+          <strong>直接拖曳</strong>
+          <p>未鎖定時可自由拖曳到任意位置。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">鎖定</div>
+        <div class="step-body">
+          <strong>選取後點「🔒 鎖定選取」</strong>
+          <p>鎖定後圖塊無法被拖動，但仍可點選。鎖定的圖塊右上角顯示 🔒 圖示，游標變為禁止符號。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">解鎖</div>
+        <div class="step-body">
+          <strong>點選鎖定圖塊 → 「🔓 解鎖圖塊」</strong>
+          <p>點選鎖定的圖塊後，左側面板按鈕切換為「🔓 解鎖圖塊」，點擊即可解鎖並恢復拖動。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">刪除</div>
+        <div class="step-body">
+          <strong>選取後點「✕ 刪除圖塊」</strong>
+          <p>選取空間圖塊（鎖定或未鎖定均可選取）後點刪除按鈕移除。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. 自動標注 -->
+  <div class="section" id="annotate">
+    <div class="section-header">
+      <div class="section-num">6</div>
+      <h2>自動標注尺寸</h2>
+    </div>
+    <p>「自動標注」功能會掃描畫布上所有沙發模塊，將互相吸附的模塊視為一個整體，自動在群組外側標出總長與總寬。</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">產生</div>
+        <div class="step-body">
+          <strong>點畫布右上角「自動標注」按鈕</strong>
+          <p>一次掃描全部模塊，對每個獨立沙發組各標注一組尺寸。上方橫向為總長，右側縱向為總寬，單位 mm。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">清除</div>
+        <div class="step-body">
+          <strong>再次點擊「自動標注」</strong>
+          <p>按鈕為切換開關：第一次點擊產生所有標注，再次點擊清除全部標注。移動模塊後重新點擊即可更新。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-icon">💡</span>
+      <p><strong>截圖包含標注：</strong>執行「📷 擷取配置圖」時，自動標注的尺寸線與訂製模塊的寬度標注都會一併輸出到 PNG 圖片中。</p>
+    </div>
+  </div>
+
+  <!-- 7. 配置清單 -->
+  <div class="section" id="list">
+    <div class="section-header">
+      <div class="section-num">7</div>
       <h2>配置清單</h2>
     </div>
     <p>畫布下方表格即時同步所有模塊資訊，可直接在清單中設定顏色與備註。</p>
@@ -6261,10 +6353,10 @@ function showToast(msg) {
     </div>
   </div>
 
-  <!-- 6. 儲存與載入 -->
+  <!-- 8. 儲存與載入 -->
   <div class="section" id="project">
     <div class="section-header">
-      <div class="section-num">6</div>
+      <div class="section-num">8</div>
       <h2>專案儲存與載入</h2>
     </div>
 
@@ -6291,10 +6383,10 @@ function showToast(msg) {
     </div>
   </div>
 
-  <!-- 7. 匯出 -->
+  <!-- 9. 匯出 -->
   <div class="section" id="export">
     <div class="section-header">
-      <div class="section-num">7</div>
+      <div class="section-num">9</div>
       <h2>匯出圖片與 CSV</h2>
     </div>
 
@@ -6302,7 +6394,7 @@ function showToast(msg) {
       <div class="card">
         <span class="card-icon">📷</span>
         <h3>擷取配置圖（PNG）</h3>
-        <p>點頂部「📷 擷取配置圖」，截取目前畫布並自動下載為 <code>.png</code>。圖片包含所有模塊與顏色，可直接附於提案文件。</p>
+        <p>點頂部「📷 擷取配置圖」，截取目前畫布並自動下載為 <code>.png</code>。圖片包含所有模塊、顏色、訂製模塊的寬度標注、空間圖塊，以及「自動標注」產生的沙發組總長寬標注，可直接附於提案文件。</p>
       </div>
       <div class="card">
         <span class="card-icon">📁</span>
@@ -6312,10 +6404,10 @@ function showToast(msg) {
     </div>
   </div>
 
-  <!-- 8. 快捷鍵 -->
+  <!-- 10. 快捷鍵 -->
   <div class="section" id="shortcuts">
     <div class="section-header">
-      <div class="section-num">8</div>
+      <div class="section-num">10</div>
       <h2>快捷鍵</h2>
     </div>
 
@@ -6347,10 +6439,10 @@ function showToast(msg) {
     </div>
   </div>
 
-  <!-- 9. 行動裝置 -->
+  <!-- 11. 行動裝置 -->
   <div class="section" id="mobile">
     <div class="section-header">
-      <div class="section-num">9</div>
+      <div class="section-num">11</div>
       <h2>行動裝置使用</h2>
     </div>
     <p>螢幕寬度小於 900px（iPad、手機）時，介面自動切換為響應式版面。</p>
