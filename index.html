@@ -967,6 +967,18 @@ tr.multi-selected-row td {
   .socket-qty-input { width: 40px; }
 }
 
+/* ── 沙發組總尺寸標注 ── */
+.group-dim-annotation {
+  position: absolute;
+  pointer-events: none;
+  z-index: 25;
+  white-space: nowrap;
+}
+.group-dim-annotation svg {
+  display: block;
+  overflow: visible;
+}
+
 /* ── 空間圖塊樣式 ── */
 .space-block {
   position: absolute;
@@ -1231,6 +1243,7 @@ tr.multi-selected-row td {
       <div id="selection-rect"></div>
       <!-- 畫布右上角浮動 zoom 控制區，不隨畫布縮放 -->
       <div class="canvas-zoom-overlay" onclick="event.stopPropagation()">
+        <button class="btn" id="auto-annotate-btn" style="padding:3px 9px; font-size:12px;" onclick="toggleAutoAnnotate()" title="自動標注所有沙發組尺寸">自動標注</button>
         <button class="btn" style="padding:3px 9px; font-size:14px; font-weight:bold; line-height:1;" onclick="setZoom(canvasZoom - 0.1)" title="縮小">－</button>
         <span id="zoom-label" style="font-size:12px; color:var(--text-secondary); min-width:38px; text-align:center; user-select:none;">100%</span>
         <button class="btn" style="padding:3px 9px; font-size:14px; font-weight:bold; line-height:1;" onclick="setZoom(canvasZoom + 0.1)" title="放大">＋</button>
@@ -2882,6 +2895,8 @@ function clearCanvas() {
     modules = [];
     selectedUid = null;
     clearMultiSelection();
+    // 一併清除沙發組標注
+    removeAllGroupDimAnnotations();
     // 一併清除空間圖塊
     spaceBlocks.forEach(sb => {
       const el = document.getElementById(`space-${sb.uid}`);
@@ -4213,6 +4228,27 @@ function captureCanvas() {
     });
   });
 
+  // 1b. 將空間圖塊納入邊界計算
+  spaceBlocks.forEach(sb => {
+    const x0 = sb.x, y0 = sb.y;
+    const x1 = sb.x + sb.widthMm * SCALE;
+    const y1 = sb.y + sb.heightMm * SCALE;
+    if (x0 < minX) minX = x0;
+    if (y0 < minY) minY = y0;
+    if (x1 > maxX) maxX = x1;
+    if (y1 > maxY) maxY = y1;
+  });
+
+  // 1c. 將群組標注（含上方 +50px、右側 +55px 延伸）納入邊界計算
+  groupDimAnnotations.forEach(a => {
+    if (!a.bbox) return;
+    const b = a.bbox;
+    if (b.minX < minX) minX = b.minX;
+    if (b.minY - 50 < minY) minY = b.minY - 50;
+    if (b.maxX + 55 > maxX) maxX = b.maxX + 55;
+    if (b.maxY > maxY) maxY = b.maxY;
+  });
+
   // 2. 加上 padding，得到擷圖範圍（邏輯像素）
   const cropX = minX - PADDING;
   const cropY = minY - PADDING;
@@ -4297,7 +4333,176 @@ function captureCanvas() {
     };
   });
 
+  // ── 輔助：端點短線 ──
+  function _drawStub(c, x, y, isHoriz) {
+    const S = 6;
+    c.beginPath();
+    if (isHoriz) { c.moveTo(x, y - S); c.lineTo(x, y + S); }
+    else         { c.moveTo(x - S, y); c.lineTo(x + S, y); }
+    c.stroke();
+  }
+  // ── 輔助：帶箭頭線段（箭頭在終點）──
+  function _drawArrowLine(c, x1, y1, x2, y2) {
+    const A = 7;
+    const ang = Math.atan2(y2 - y1, x2 - x1);
+    c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+    c.beginPath();
+    c.moveTo(x2, y2);
+    c.lineTo(x2 - A * Math.cos(ang - 0.42), y2 - A * Math.sin(ang - 0.42));
+    c.moveTo(x2, y2);
+    c.lineTo(x2 - A * Math.cos(ang + 0.42), y2 - A * Math.sin(ang + 0.42));
+    c.stroke();
+  }
+
   function finalizeDownload() {
+    // ── 繪製訂製模塊寬度標注（與 updateDimAnnotation 樣式一致）──
+    // DOM 定位：el.style.top = -(svgH+5) = -27px（相對模塊左上角）
+    //           量測線在 SVG 內 y = svgH-5 = 17
+    //           → 量測線相對模塊左上角 = -27 + 17 = -10px
+    //           → 相對模塊中心 = -hPx/2 - 10
+    const DIM_C = '#333333';
+    const AR_C  = 6;
+
+    modules.forEach(mod => {
+      if (!mod.isCustom) return;
+      const wPx = mod.width  * SCALE;
+      const hPx = mod.height * SCALE;
+      const centerX = (mod.x + wPx / 2) - cropX;
+      const centerY = (mod.y + hPx / 2) - cropY;
+      const rad = (mod.rotate * Math.PI) / 180;
+
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate(rad);
+      const annotY = -hPx / 2 - 10; // 與 DOM 一致：模塊頂端往上 10px
+      const x0 = -wPx / 2;
+      const x1 =  wPx / 2;
+      const midX = 0;
+      const gap = Math.min(22, wPx / 2 - 2);
+
+      // 主橫線（中央留空）
+      ctx.strokeStyle = DIM_C; ctx.lineWidth = 1; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x0,         annotY); ctx.lineTo(midX - gap, annotY); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(midX + gap,  annotY); ctx.lineTo(x1,         annotY); ctx.stroke();
+
+      // 左開口箭頭
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x0 + AR_C, annotY - AR_C/2);
+      ctx.lineTo(x0, annotY);
+      ctx.lineTo(x0 + AR_C, annotY + AR_C/2);
+      ctx.stroke();
+      // 右開口箭頭
+      ctx.beginPath();
+      ctx.moveTo(x1 - AR_C, annotY - AR_C/2);
+      ctx.lineTo(x1, annotY);
+      ctx.lineTo(x1 - AR_C, annotY + AR_C/2);
+      ctx.stroke();
+
+      // 數字標籤
+      ctx.font = 'bold 11px "Microsoft JhengHei","PingFang TC",sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineWidth = 3; ctx.strokeStyle = 'white';
+      ctx.strokeText(`${mod.width}`, midX, annotY);
+      ctx.fillStyle = DIM_C;
+      ctx.fillText(`${mod.width}`, midX, annotY);
+
+      ctx.restore();
+    });
+
+    // ── 繪製空間圖塊（虛線框 + 尺寸標籤）──
+    spaceBlocks.forEach(sb => {
+      const x = sb.x - cropX;
+      const y = sb.y - cropY;
+      const w = sb.widthMm  * SCALE;
+      const h = sb.heightMm * SCALE;
+      ctx.save();
+      ctx.strokeStyle = sb.locked ? '#888' : '#555';
+      ctx.lineWidth   = 1.5;
+      ctx.setLineDash([5, 4]);
+      ctx.strokeRect(x, y, w, h);
+      ctx.setLineDash([]);
+      const lbl = `${sb.widthMm} × ${sb.heightMm}`;
+      ctx.font = 'bold 11px "Microsoft JhengHei","PingFang TC",sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.strokeStyle = 'white'; ctx.lineWidth = 3;
+      ctx.strokeText(lbl, x + w / 2, y + h - 4);
+      ctx.fillStyle = '#444';
+      ctx.fillText(lbl, x + w / 2, y + h - 4);
+      ctx.restore();
+    });
+
+    // ── 繪製群組總長寬標注（外觀與訂製模塊標注一致：深灰、開口箭頭）──
+    const DIM_COLOR = '#333333';
+    const AR = 6, MARGIN_DIM = 32;
+
+    // 開口箭頭：在 (px,py) 朝 ang 方向
+    const drawOpenArrow = (c, px, py, ang) => {
+      c.beginPath();
+      c.moveTo(px + AR*Math.cos(ang-0.5), py + AR*Math.sin(ang-0.5));
+      c.lineTo(px, py);
+      c.lineTo(px + AR*Math.cos(ang+0.5), py + AR*Math.sin(ang+0.5));
+      c.stroke();
+    };
+
+    groupDimAnnotations.forEach(a => {
+      if (!a.el || !a.bbox) return;
+      const b  = a.bbox;
+      const ox = b.minX - cropX;
+      const oy = b.minY - cropY;
+      const gW = b.widthPx;
+      const gH = b.heightPx;
+      const gapH = Math.max(22, gW * 0.12);
+      const gapV = Math.max(22, gH * 0.12);
+
+      ctx.save();
+      ctx.strokeStyle = DIM_COLOR;
+      ctx.lineWidth   = 1.5;
+      ctx.lineCap     = 'round';
+      ctx.lineJoin    = 'round';
+
+      // 上方橫向總長
+      const lineY = oy - MARGIN_DIM;
+      const midX  = ox + gW / 2;
+      // 主線（中央留空）
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(ox,           lineY); ctx.lineTo(midX - gapH, lineY); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(midX + gapH,  lineY); ctx.lineTo(ox + gW,     lineY); ctx.stroke();
+      // 開口箭頭
+      ctx.lineWidth = 1.5;
+      drawOpenArrow(ctx, ox,      lineY, 0);
+      drawOpenArrow(ctx, ox + gW, lineY, Math.PI);
+      // 數字
+      ctx.font = 'bold 11px "Microsoft JhengHei","PingFang TC",sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineWidth = 3; ctx.strokeStyle = 'white';
+      ctx.strokeText(`${b.widthMm}`, midX, lineY);
+      ctx.fillStyle = DIM_COLOR; ctx.fillText(`${b.widthMm}`, midX, lineY);
+
+      // 右側縱向總深
+      const lineX = ox + gW + MARGIN_DIM;
+      const midY  = oy + gH / 2;
+      ctx.strokeStyle = DIM_COLOR;
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(lineX, oy);           ctx.lineTo(lineX, midY - gapV); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(lineX, midY + gapV);  ctx.lineTo(lineX, oy + gH);     ctx.stroke();
+      ctx.lineWidth = 1.5;
+      drawOpenArrow(ctx, lineX, oy,      Math.PI/2);
+      drawOpenArrow(ctx, lineX, oy + gH, -Math.PI/2);
+      // 旋轉數字
+      ctx.save();
+      ctx.translate(lineX, midY);
+      ctx.rotate(-Math.PI / 2);
+      ctx.font = 'bold 11px "Microsoft JhengHei","PingFang TC",sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineWidth = 3; ctx.strokeStyle = 'white';
+      ctx.strokeText(`${b.heightMm}`, 0, 0);
+      ctx.fillStyle = DIM_COLOR; ctx.fillText(`${b.heightMm}`, 0, 0);
+      ctx.restore();
+
+      ctx.restore();
+    });
+
     exportCanvas.toBlob(blob => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -4784,6 +4989,209 @@ function closePanelDrawer() {
   document.getElementById('panel').classList.remove('panel-open');
   document.getElementById('panel-overlay').classList.remove('overlay-show');
   document.body.style.overflow = '';
+}
+
+// ==========================================
+// 沙發組尺寸標注（Group Dimension Annotation）
+// ==========================================
+let groupDimAnnotations = []; // [{ uid, el }]
+
+// ── 取得模塊旋轉後的 AABB（axis-aligned bounding box）──
+function getModAABB(mod) {
+  const wPx = mod.width  * SCALE;
+  const hPx = mod.height * SCALE;
+  const cx  = mod.x + wPx / 2;
+  const cy  = mod.y + hPx / 2;
+  const rad = (mod.rotate || 0) * Math.PI / 180;
+  const cos = Math.cos(rad), sin = Math.sin(rad);
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  [[-wPx/2,-hPx/2],[wPx/2,-hPx/2],[wPx/2,hPx/2],[-wPx/2,hPx/2]].forEach(([dx,dy]) => {
+    const rx = cx + dx*cos - dy*sin;
+    const ry = cy + dx*sin + dy*cos;
+    if (rx < minX) minX = rx; if (rx > maxX) maxX = rx;
+    if (ry < minY) minY = ry; if (ry > maxY) maxY = ry;
+  });
+  return { minX, minY, maxX, maxY };
+}
+
+// ── Union-Find ──
+function makeUF(n) {
+  const p = Array.from({length:n},(_,i)=>i);
+  const find = i => { while(p[i]!==i) { p[i]=p[p[i]]; i=p[i]; } return i; };
+  const union = (a,b) => { p[find(a)]=find(b); };
+  return { find, union };
+}
+
+// ── 判斷兩 AABB 是否「鄰接」（邊邊距離 ≤ 容許值）──
+// 兩個矩形互相接觸：投影上沒有間隙（或間隙 ≤ TOUCH_TOL），且另一軸上有重疊
+const TOUCH_TOL = SNAP_THRESHOLD * 2 + 2; // 稍寬鬆，容許輕微未完全對齊
+function aabbAdjacent(a, b) {
+  const gapX = Math.max(0, Math.max(a.minX, b.minX) - Math.min(a.maxX, b.maxX));
+  const gapY = Math.max(0, Math.max(a.minY, b.minY) - Math.min(a.maxY, b.maxY));
+  const overlapX = Math.min(a.maxX, b.maxX) - Math.max(a.minX, b.minX);
+  const overlapY = Math.min(a.maxY, b.maxY) - Math.max(a.minY, b.minY);
+  // 水平相鄰：X 方向幾乎碰觸，Y 方向有重疊
+  if (gapX <= TOUCH_TOL && overlapY > -TOUCH_TOL) return true;
+  // 垂直相鄰：Y 方向幾乎碰觸，X 方向有重疊
+  if (gapY <= TOUCH_TOL && overlapX > -TOUCH_TOL) return true;
+  return false;
+}
+
+// ── 計算一組模塊的旋轉後聯合 AABB ──
+function groupBBox(mods) {
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  mods.forEach(mod => {
+    const b = getModAABB(mod);
+    if (b.minX<minX) minX=b.minX; if (b.maxX>maxX) maxX=b.maxX;
+    if (b.minY<minY) minY=b.minY; if (b.maxY>maxY) maxY=b.maxY;
+  });
+  return { minX, minY, maxX, maxY,
+    widthPx:  maxX-minX, heightPx: maxY-minY,
+    widthMm:  Math.round((maxX-minX)/SCALE),
+    heightMm: Math.round((maxY-minY)/SCALE) };
+}
+
+// ── 渲染單一群組標注 DOM（外觀與訂製模塊標注一致）──
+function renderGroupDimDOM(bbox) {
+  const AR   = 6;    // 箭頭長（開口箭頭，兩線組成）
+  const MARGIN = 32; // 標注線距群組邊緣距離 px
+  const GAP  = 22;   // 中央數字留白半寬
+  const hSvgH = MARGIN + AR + 4; // 上方 SVG 留空
+  const vSvgW = MARGIN + AR + 4; // 右側 SVG 留空
+
+  const uid = Date.now() + Math.floor(Math.random()*9999) + 50000000;
+  const viewport = document.getElementById('canvas-viewport');
+  const wrap = document.createElement('div');
+  wrap.className = 'group-dim-annotation';
+  wrap.id = `grpdim-${uid}`;
+  wrap.style.left   = `${bbox.minX}px`;
+  wrap.style.top    = `${bbox.minY}px`;
+  wrap.style.width  = `${bbox.widthPx + vSvgW}px`;
+  wrap.style.height = `${bbox.heightPx + hSvgH}px`;
+
+  const W  = bbox.widthPx, H = bbox.heightPx;
+  const svgW = W + vSvgW, svgH = H + hSvgH;
+
+  // 橫線：距群組頂端 MARGIN px → y = hSvgH - MARGIN
+  const lineY  = hSvgH - MARGIN;
+  const midX   = W / 2;
+  const gapH   = Math.max(GAP, W * 0.12);
+
+  // 縱線：距群組右側 MARGIN px → x = W + MARGIN
+  const lineX  = W + MARGIN;
+  const lineY0 = hSvgH;
+  const lineY1 = hSvgH + H;
+  const midY   = hSvgH + H / 2;
+  const gapV   = Math.max(GAP, H * 0.12);
+
+  // 開口箭頭 helper → SVG path string
+  // 在點 (px,py) 朝方向 ang 畫開口箭頭（往 -ang 方向）
+  const arrowPath = (px, py, ang) =>
+    `M${px + AR*Math.cos(ang-0.5)} ${py + AR*Math.sin(ang-0.5)} L${px} ${py} L${px + AR*Math.cos(ang+0.5)} ${py + AR*Math.sin(ang+0.5)}`;
+
+  wrap.innerHTML = `
+<svg width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg" overflow="visible"
+     style="position:absolute;top:-${hSvgH}px;left:0;">
+
+  <!-- ── 總長（上方橫向）── -->
+  <!-- 主橫線（中央留數字空白） -->
+  <line x1="0" y1="${lineY}" x2="${midX - gapH}" y2="${lineY}"
+        stroke="#333" stroke-width="1" stroke-linecap="round"/>
+  <line x1="${midX + gapH}" y1="${lineY}" x2="${W}" y2="${lineY}"
+        stroke="#333" stroke-width="1" stroke-linecap="round"/>
+  <!-- 左開口箭頭 -->
+  <path d="${arrowPath(0, lineY, 0)}"
+        stroke="#333" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- 右開口箭頭 -->
+  <path d="${arrowPath(W, lineY, Math.PI)}"
+        stroke="#333" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- 總長數字 -->
+  <text x="${midX}" y="${lineY + 4}" text-anchor="middle"
+        font-family="Microsoft JhengHei, PingFang TC, sans-serif"
+        font-size="11" font-weight="bold" fill="#333"
+        paint-order="stroke" stroke="white" stroke-width="3" stroke-linejoin="round">${bbox.widthMm}</text>
+
+  <!-- ── 總深（右側縱向）── -->
+  <!-- 主縱線（中央留數字空白） -->
+  <line x1="${lineX}" y1="${lineY0}" x2="${lineX}" y2="${midY - gapV}"
+        stroke="#333" stroke-width="1" stroke-linecap="round"/>
+  <line x1="${lineX}" y1="${midY + gapV}" x2="${lineX}" y2="${lineY1}"
+        stroke="#333" stroke-width="1" stroke-linecap="round"/>
+  <!-- 上開口箭頭 -->
+  <path d="${arrowPath(lineX, lineY0, Math.PI/2)}"
+        stroke="#333" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- 下開口箭頭 -->
+  <path d="${arrowPath(lineX, lineY1, -Math.PI/2)}"
+        stroke="#333" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- 總深數字（旋轉90°）-->
+  <text x="${lineX}" y="${midY + 4}" text-anchor="middle"
+        transform="rotate(-90,${lineX},${midY})"
+        font-family="Microsoft JhengHei, PingFang TC, sans-serif"
+        font-size="11" font-weight="bold" fill="#333"
+        paint-order="stroke" stroke="white" stroke-width="3" stroke-linejoin="round">${bbox.heightMm}</text>
+</svg>`;
+
+  viewport.appendChild(wrap);
+  groupDimAnnotations.push({ uid, el: wrap, bbox });
+  return { uid, widthMm: bbox.widthMm, heightMm: bbox.heightMm };
+}
+
+// ── 切換自動標注（按一次產生、再按一次清除）──
+let _annotateActive = false;
+function toggleAutoAnnotate() {
+  if (_annotateActive) {
+    removeAllGroupDimAnnotations();
+    _annotateActive = false;
+    const btn = document.getElementById('auto-annotate-btn');
+    if (btn) { btn.style.borderColor = ''; btn.style.color = ''; btn.style.fontWeight = ''; }
+  } else {
+    autoAnnotateAllGroups();
+    _annotateActive = groupDimAnnotations.length > 0;
+    const btn = document.getElementById('auto-annotate-btn');
+    if (btn) { btn.style.borderColor = '#333'; btn.style.color = '#333'; btn.style.fontWeight = 'bold'; }
+  }
+}
+
+// ── 主入口：自動掃描所有模塊並分群標注 ──
+function autoAnnotateAllGroups() {
+  if (modules.length === 0) { showToast('畫布上沒有任何模塊'); return; }
+
+  // 先清除現有標注
+  removeAllGroupDimAnnotations();
+
+  // 計算每個模塊的 AABB
+  const aabbs = modules.map(mod => getModAABB(mod));
+
+  // Union-Find 分群
+  const uf = makeUF(modules.length);
+  for (let i = 0; i < modules.length; i++) {
+    for (let j = i+1; j < modules.length; j++) {
+      if (aabbAdjacent(aabbs[i], aabbs[j])) uf.union(i, j);
+    }
+  }
+
+  // 收集各群組
+  const groupMap = new Map();
+  modules.forEach((mod, i) => {
+    const root = uf.find(i);
+    if (!groupMap.has(root)) groupMap.set(root, []);
+    groupMap.get(root).push(mod);
+  });
+
+  // 對每個群組標注
+  let count = 0;
+  groupMap.forEach(mods => {
+    const bbox = groupBBox(mods);
+    renderGroupDimDOM(bbox);
+    count++;
+  });
+
+  showToast(`已自動標注 ${count} 個沙發組`);
+}
+
+function removeAllGroupDimAnnotations() {
+  groupDimAnnotations.forEach(a => { if (a.el) a.el.remove(); });
+  groupDimAnnotations = [];
 }
 
 // ==========================================
