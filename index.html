@@ -967,6 +967,44 @@ tr.multi-selected-row td {
   .socket-qty-input { width: 40px; }
 }
 
+/* ── 對齊下拉選單 ── */
+.align-dropdown { position: relative; width: 100%; }
+.align-dropdown-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+.align-dropdown-toggle:hover { background: var(--bg); }
+.align-dropdown-toggle .ad-arrow {
+  font-size: 10px;
+  color: var(--text-secondary);
+  transition: transform 0.2s;
+}
+.align-dropdown.open .ad-arrow { transform: rotate(180deg); }
+.align-dropdown-menu {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0 4px;
+}
+.align-dropdown.open .align-dropdown-menu { display: flex; }
+.align-btn-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
 /* ── 沙發組總尺寸標注 ── */
 .group-dim-annotation {
   position: absolute;
@@ -979,7 +1017,7 @@ tr.multi-selected-row td {
   overflow: visible;
 }
 
-/* ── 空間圖塊樣式 ── */
+/* ── 空間範圍樣式 ── */
 .space-block {
   position: absolute;
   cursor: grab;
@@ -1063,10 +1101,10 @@ tr.multi-selected-row td {
     <button id="panel-close" onclick="closePanelDrawer()">✕ 關閉</button>
     <div class="panel-title">Agora沙發模塊</div>
 
-    <!-- ── 空間圖塊卡片 ── -->
+    <!-- ── 空間範圍卡片 ── -->
     <div class="insert-group open" id="space-group">
       <div class="insert-group-header" onclick="toggleSpaceGroup()">
-        <span>⬜ 空間圖塊</span>
+        <span>⬜ 空間範圍</span>
         <span class="ig-arrow">▼</span>
       </div>
       <div class="insert-group-body" style="padding:10px 12px; gap:7px;">
@@ -1082,10 +1120,10 @@ tr.multi-selected-row td {
             style="width:72px; padding:5px 7px; border:1px solid var(--border-strong); border-radius:5px; font-size:13px; background:var(--surface); color:var(--text-primary); outline:none;">
           <span style="font-size:12px; color:var(--text-secondary);">mm</span>
         </div>
-        <button class="btn" onclick="insertSpaceBlock()">插入空間圖塊</button>
+        <button class="btn" onclick="insertSpaceBlock()">插入空間範圍</button>
         <div class="btn-row" style="margin-top:2px;">
           <button class="btn" id="lock-space-btn" onclick="toggleLockSelectedSpace()">🔒 鎖定選取</button>
-          <button class="btn btn-danger" onclick="deleteSelectedSpace()">✕ 刪除圖塊</button>
+          <button class="btn btn-danger" onclick="deleteSelectedSpace()">✕ 刪除空間</button>
         </div>
         <p class="hint" style="margin:0;">虛線框，不計入配置清單。鎖定後無法拖動但仍可點選，再次點擊解鎖。</p>
       </div>
@@ -1195,6 +1233,30 @@ tr.multi-selected-row td {
 
 
       <p class="hint">點擊畫布中的模塊進行選取，再執行旋轉或微調。</p>
+    </div>
+
+    <hr class="divider">
+
+    <div class="section">
+      <div class="align-dropdown" id="align-dropdown">
+        <div class="align-dropdown-toggle" onclick="toggleAlignDropdown()">
+          <span>模塊對齊</span>
+          <span class="ad-arrow">▼</span>
+        </div>
+        <div class="align-dropdown-menu">
+          <div class="align-btn-grid">
+            <button class="btn" onclick="alignSelected('top')"    title="所有模塊向上緣對齊"><span class="material-icons" style="font-size:15px;vertical-align:middle;">vertical_align_top</span> 靠上</button>
+            <button class="btn" onclick="alignSelected('bottom')" title="所有模塊向下緣對齊"><span class="material-icons" style="font-size:15px;vertical-align:middle;">vertical_align_bottom</span> 靠下</button>
+            <button class="btn" onclick="alignSelected('left')"   title="所有模塊向左緣對齊"><span class="material-icons" style="font-size:15px;vertical-align:middle;">align_horizontal_left</span> 靠左</button>
+            <button class="btn" onclick="alignSelected('right')"  title="所有模塊向右緣對齊"><span class="material-icons" style="font-size:15px;vertical-align:middle;">align_horizontal_right</span> 靠右</button>
+          </div>
+          <div class="align-btn-grid">
+            <button class="btn" onclick="alignSelected('centerH')" title="水平置中對齊"><span class="material-icons" style="font-size:15px;vertical-align:middle;">align_horizontal_center</span> 水平置中</button>
+            <button class="btn" onclick="alignSelected('centerV')" title="垂直置中對齊"><span class="material-icons" style="font-size:15px;vertical-align:middle;">vertical_align_center</span> 垂直置中</button>
+          </div>
+          <p class="hint" style="margin:4px 0 0;">選取兩個以上模塊（含空間範圍）後點選對齊方向。</p>
+        </div>
+      </div>
     </div>
 
     <hr class="divider">
@@ -2901,7 +2963,7 @@ function clearCanvas() {
     clearMultiSelection();
     // 一併清除沙發組標注
     removeAllGroupDimAnnotations();
-    // 一併清除空間圖塊
+    // 一併清除空間範圍
     spaceBlocks.forEach(sb => {
       const el = document.getElementById(`space-${sb.uid}`);
       if (el) el.remove();
@@ -4232,7 +4294,7 @@ function captureCanvas() {
     });
   });
 
-  // 1b. 將空間圖塊納入邊界計算
+  // 1b. 將空間範圍納入邊界計算
   spaceBlocks.forEach(sb => {
     const x0 = sb.x, y0 = sb.y;
     const x1 = sb.x + sb.widthMm * SCALE;
@@ -4414,7 +4476,7 @@ function captureCanvas() {
       ctx.restore();
     });
 
-    // ── 繪製空間圖塊（虛線框 + 尺寸標籤）──
+    // ── 繪製空間範圍（虛線框 + 尺寸標籤）──
     spaceBlocks.forEach(sb => {
       const x = sb.x - cropX;
       const y = sb.y - cropY;
@@ -4996,6 +5058,84 @@ function closePanelDrawer() {
 }
 
 // ==========================================
+// 模塊對齊（Align Selected）
+// ==========================================
+function toggleAlignDropdown() {
+  document.getElementById('align-dropdown').classList.toggle('open');
+}
+
+function alignSelected(direction) {
+  // 收集所有選取的沙發模塊 uid
+  const sofaUids = new Set();
+  if (selectedUids.size > 0) selectedUids.forEach(u => sofaUids.add(u));
+  else if (selectedUid !== null) sofaUids.add(selectedUid);
+
+  // 收集選取的空間範圍 uid
+  const spaceUid = selectedSpaceUid;
+
+  if (sofaUids.size + (spaceUid ? 1 : 0) < 2) {
+    showToast('請先選取兩個以上的模塊');
+    return;
+  }
+
+  // 取得每個目標的 AABB（{ uid, x, y, w, h, isSpace }）
+  const items = [];
+  sofaUids.forEach(uid => {
+    const mod = modules.find(m => m.uid === uid);
+    if (!mod) return;
+    const b = getModAABB(mod);
+    items.push({ uid, x: b.minX, y: b.minY, w: b.maxX - b.minX, h: b.maxY - b.minY, isSpace: false, mod });
+  });
+  if (spaceUid) {
+    const sb = spaceBlocks.find(s => s.uid === spaceUid);
+    if (sb) {
+      items.push({
+        uid: spaceUid,
+        x: sb.x, y: sb.y,
+        w: sb.widthMm * SCALE,
+        h: sb.heightMm * SCALE,
+        isSpace: true, sb
+      });
+    }
+  }
+
+  // 計算群組邊界
+  const minX = Math.min(...items.map(i => i.x));
+  const minY = Math.min(...items.map(i => i.y));
+  const maxX = Math.max(...items.map(i => i.x + i.w));
+  const maxY = Math.max(...items.map(i => i.y + i.h));
+
+  items.forEach(item => {
+    let dx = 0, dy = 0;
+    if (direction === 'top')     dy = minY - item.y;
+    if (direction === 'bottom')  dy = maxY - (item.y + item.h);
+    if (direction === 'left')    dx = minX - item.x;
+    if (direction === 'right')   dx = maxX - (item.x + item.w);
+    if (direction === 'centerH') dx = ((minX + maxX) / 2) - (item.x + item.w / 2);
+    if (direction === 'centerV') dy = ((minY + maxY) / 2) - (item.y + item.h / 2);
+
+    if (item.isSpace) {
+      // 空間範圍直接移動 x/y
+      item.sb.x += dx;
+      item.sb.y += dy;
+      updateSpaceBlockDOM(item.sb);
+    } else {
+      // 沙發模塊：從 AABB 的位移換算回模塊左上角座標
+      // AABB minX/minY 是旋轉後的外框左上，而模塊的 x/y 是未旋轉的左上
+      // 所以移動量 dx/dy 可以直接加到 mod.x/mod.y
+      item.mod.x += dx;
+      item.mod.y += dy;
+      const el = document.getElementById(`mod-${item.mod.uid}`);
+      if (el) { el.style.left = `${item.mod.x}px`; el.style.top = `${item.mod.y}px`; }
+      updateDimAnnotation(item.mod);
+    }
+  });
+
+  const labels = { top:'靠上', bottom:'靠下', left:'靠左', right:'靠右', centerH:'水平置中', centerV:'垂直置中' };
+  showToast(`已對齊：${labels[direction]}`);
+}
+
+// ==========================================
 // 沙發組尺寸標注（Group Dimension Annotation）
 // ==========================================
 let groupDimAnnotations = []; // [{ uid, el }]
@@ -5199,7 +5339,7 @@ function removeAllGroupDimAnnotations() {
 }
 
 // ==========================================
-// 空間圖塊（Space Block）功能
+// 空間範圍（Space Block）功能
 // ==========================================
 let spaceBlocks = [];      // { uid, widthMm, heightMm, x, y, locked }
 let selectedSpaceUid = null;
@@ -5227,7 +5367,7 @@ function insertSpaceBlock() {
   renderSpaceBlockDOM(sb);
   selectSpaceBlock(uid);
   updateEmptyHint();
-  showToast(`已插入空間圖塊 ${wMm}×${hMm}mm`);
+  showToast(`已插入空間範圍 ${wMm}×${hMm}mm`);
 }
 
 function renderSpaceBlockDOM(sb) {
@@ -5281,7 +5421,7 @@ function selectSpaceBlock(uid) {
   }
   clearMultiSelection();
 
-  // 取消舊空間圖塊選取
+  // 取消舊空間範圍選取
   if (selectedSpaceUid !== null) {
     const old = document.getElementById(`space-${selectedSpaceUid}`);
     if (old) old.classList.remove('selected-space');
@@ -5306,7 +5446,7 @@ function updateLockBtn() {
 }
 
 function toggleLockSelectedSpace() {
-  if (selectedSpaceUid === null) { showToast('請先選取空間圖塊'); return; }
+  if (selectedSpaceUid === null) { showToast('請先選取空間範圍'); return; }
   const sb = spaceBlocks.find(s => s.uid === selectedSpaceUid);
   if (!sb) return;
   sb.locked = !sb.locked;
@@ -5317,18 +5457,18 @@ function toggleLockSelectedSpace() {
     div.style.cursor = sb.locked ? 'not-allowed' : '';
   }
   updateLockBtn();
-  showToast(sb.locked ? '空間圖塊已鎖定' : '空間圖塊已解鎖');
+  showToast(sb.locked ? '空間範圍已鎖定' : '空間範圍已解鎖');
 }
 
 function deleteSelectedSpace() {
-  if (selectedSpaceUid === null) { showToast('請先選取空間圖塊'); return; }
+  if (selectedSpaceUid === null) { showToast('請先選取空間範圍'); return; }
   const div = document.getElementById(`space-${selectedSpaceUid}`);
   if (div) div.remove();
   spaceBlocks = spaceBlocks.filter(s => s.uid !== selectedSpaceUid);
   selectedSpaceUid = null;
   updateLockBtn();
   updateEmptyHint();
-  showToast('已刪除空間圖塊');
+  showToast('已刪除空間範圍');
 }
 
 function startSpaceDrag(e, sb) {
@@ -5987,7 +6127,7 @@ function showToast(msg) {
     <div class="nav-group-label">操作</div>
     <a href="#canvas">畫布操作</a>
     <a href="#module">模塊操作</a>
-    <a href="#space">空間圖塊</a>
+    <a href="#space">空間範圍</a>
     <a href="#annotate">自動標注</a>
     <a href="#list">配置清單</a>
 
@@ -6010,7 +6150,7 @@ function showToast(msg) {
     <p>專為 AGORA 系列組合沙發設計的 2D 配置工具。從選件排列、顏色配置到規格彙整，用瀏覽器開啟即可使用。</p>
     <div class="hero-badges">
       <span class="badge">🛋️ 直型・轉角・訂製模塊</span>
-      <span class="badge">⬜ 空間圖塊（可鎖定）</span>
+      <span class="badge">⬜ 空間範圍（可鎖定）</span>
       <span class="badge">📐 沙發組自動尺寸標注</span>
       <span class="badge">🎨 即時選色與布號管理</span>
       <span class="badge">💾 支援專案儲存</span>
@@ -6031,7 +6171,7 @@ function showToast(msg) {
       <div class="ui-diagram-body">
         <div class="ui-left">
           <div>
-            <div class="ui-label">⬜ 空間圖塊</div>
+            <div class="ui-label">⬜ 空間範圍</div>
             <span class="ui-tag">插入</span>
             <span class="ui-tag">🔒 鎖定</span>
             <span class="ui-tag">✕ 刪除</span>
@@ -6046,6 +6186,7 @@ function showToast(msg) {
           <div>
             <div class="ui-label">工具</div>
             <span class="ui-tag">↺ 旋轉</span>
+            <span class="ui-tag">⬜ 對齊</span>
             <span class="ui-tag">⧉ 複製</span>
             <span class="ui-tag">✕ 刪除</span>
           </div>
@@ -6226,26 +6367,44 @@ function showToast(msg) {
         <div class="step-num">多選</div>
         <div class="step-body">
           <strong>「☑ 多選模式」（適用 iPad / 觸控）</strong>
-          <p>開啟後每次點擊模塊會累積加選；再次點擊已選取的模塊則取消。多選後可對整組執行旋轉、複製或刪除。</p>
+          <p>開啟後每次點擊模塊會累積加選；再次點擊已選取的模塊則取消。多選後可對整組執行旋轉、複製、刪除或對齊。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">對齊</div>
+        <div class="step-body">
+          <strong>左側面板「模塊對齊」下拉選單</strong>
+          <p>選取兩個以上的模塊（含空間範圍）後展開下拉選單，點選對齊方式。以所有選取模塊的旋轉後外框為基準計算對齊位置。</p>
+          <table class="data-table" style="margin-top:8px;">
+            <thead><tr><th>按鈕</th><th>對齊方式</th></tr></thead>
+            <tbody>
+              <tr><td>靠上</td><td>所有模塊向群組最上緣對齊</td></tr>
+              <tr><td>靠下</td><td>所有模塊向群組最下緣對齊</td></tr>
+              <tr><td>靠左</td><td>所有模塊向群組最左緣對齊</td></tr>
+              <tr><td>靠右</td><td>所有模塊向群組最右緣對齊</td></tr>
+              <tr><td>水平置中</td><td>所有模塊對齊群組水平中線</td></tr>
+              <tr><td>垂直置中</td><td>所有模塊對齊群組垂直中線</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- 5. 空間圖塊 -->
+  <!-- 5. 空間範圍 -->
   <div class="section" id="space">
     <div class="section-header">
       <div class="section-num">5</div>
-      <h2>空間圖塊</h2>
+      <h2>空間範圍</h2>
     </div>
-    <p>「空間圖塊」是無填滿的深灰虛線框，用來標示空間範圍或留空區域，不會出現在配置清單中。左側面板中「⬜ 空間圖塊」為獨立卡片，位於「➕ 插入模塊」上方，可點擊標題列收合。</p>
+    <p>「空間範圍」是無填滿的深灰虛線框，用來標示空間範圍或留空區域，不會出現在配置清單中。左側面板中「⬜ 空間範圍」為獨立卡片，位於「➕ 插入模塊」上方，可點擊標題列收合。</p>
 
     <div class="steps">
       <div class="step">
         <div class="step-num">插入</div>
         <div class="step-body">
-          <strong>左側面板「⬜ 空間圖塊」卡片</strong>
-          <p>輸入寬度與深度（mm）後點「插入空間圖塊」，圖塊會出現在畫布中央，框內顯示長 × 寬尺寸。</p>
+          <strong>左側面板「⬜ 空間範圍」卡片</strong>
+          <p>輸入寬度與深度（mm）後點「插入空間範圍」，圖塊會出現在畫布中央，框內顯示長 × 寬尺寸。</p>
         </div>
       </div>
       <div class="step">
@@ -6272,8 +6431,8 @@ function showToast(msg) {
       <div class="step">
         <div class="step-num">刪除</div>
         <div class="step-body">
-          <strong>選取後點「✕ 刪除圖塊」</strong>
-          <p>選取空間圖塊（鎖定或未鎖定均可選取）後點刪除按鈕移除。</p>
+          <strong>選取後點「✕ 刪除空間」</strong>
+          <p>選取空間範圍（鎖定或未鎖定均可選取）後點刪除按鈕移除。</p>
         </div>
       </div>
     </div>
@@ -6394,7 +6553,7 @@ function showToast(msg) {
       <div class="card">
         <span class="card-icon">📷</span>
         <h3>擷取配置圖（PNG）</h3>
-        <p>點頂部「📷 擷取配置圖」，截取目前畫布並自動下載為 <code>.png</code>。圖片包含所有模塊、顏色、訂製模塊的寬度標注、空間圖塊，以及「自動標注」產生的沙發組總長寬標注，可直接附於提案文件。</p>
+        <p>點頂部「📷 擷取配置圖」，截取目前畫布並自動下載為 <code>.png</code>。圖片包含所有模塊、顏色、訂製模塊的寬度標注、空間範圍，以及「自動標注」產生的沙發組總長寬標注，可直接附於提案文件。</p>
       </div>
       <div class="card">
         <span class="card-icon">📁</span>
