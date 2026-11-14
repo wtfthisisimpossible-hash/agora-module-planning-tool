@@ -1084,6 +1084,34 @@ tr.multi-selected-row td {
   pointer-events: none;
 }
 .toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ===== 匯出配置 PDF 對話框 ===== */
+.pdf-dialog {
+  background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
+  padding: 22px 24px 18px; width: min(380px, 100%);
+}
+.pdf-dialog h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.pdf-dialog-sub { font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; }
+.pdf-orient-group { display: flex; gap: 12px; margin-bottom: 18px; }
+.pdf-orient-card {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 14px 8px 10px; border: 1.5px solid var(--border); border-radius: var(--radius-md);
+  cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-secondary);
+  transition: all 0.15s ease; background: var(--surface-2);
+}
+.pdf-orient-card input { position: absolute; opacity: 0; pointer-events: none; }
+.pdf-orient-card:hover { border-color: var(--accent); }
+.pdf-orient-card:has(input:checked) { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
+.pdf-page-icon {
+  display: block; border: 2px solid currentColor; border-radius: 3px; background: #fff; position: relative;
+}
+.pdf-page-icon.portrait  { width: 34px; height: 48px; }
+.pdf-page-icon.landscape { width: 48px; height: 34px; }
+.pdf-page-icon::before { content: ""; position: absolute; left: 4px; right: 4px; top: 4px; height: 42%; background: currentColor; opacity: 0.25; border-radius: 1px; }
+.pdf-page-icon::after  { content: ""; position: absolute; left: 4px; right: 4px; bottom: 4px; height: 28%;
+  background: repeating-linear-gradient(to bottom, currentColor 0 2px, transparent 2px 5px); opacity: 0.45; }
+.pdf-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.pdf-dialog-actions .btn { padding: 7px 16px; }
 @media (max-width: 900px) {
   .toast { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
 }
@@ -1297,6 +1325,7 @@ tr.multi-selected-row td {
       </div>
       <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
         <div class="icon-btn-group" style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+          <button class="btn btn-icon-responsive" style="padding: 4px 9px; font-size: 12px; font-weight: bold; border-color: var(--accent); color: var(--accent);" onclick="openPdfExportDialog()" title="匯出 A4 配置 PDF（上：配置圖，下：配置清單）"><span class="material-icons btn-icon-only" style="font-size:20px;vertical-align:middle;color:var(--accent);">picture_as_pdf</span><span class="btn-label-text">📄 匯出配置PDF</span></button>
           <button class="btn btn-icon-responsive" style="padding: 4px 9px; font-size: 12px; font-weight: bold; border-color: var(--accent); color: var(--accent);" onclick="captureCanvas()"><span class="material-icons btn-icon-only" style="font-size:20px;vertical-align:middle;color:var(--accent);">photo_camera</span><span class="btn-label-text">📷 擷取配置圖</span></button>
         </div>
       </div>
@@ -1357,6 +1386,20 @@ tr.multi-selected-row td {
   </div>
 </div>
 
+<div id="pdf-export-overlay" onclick="if(event.target===this)closePdfExportDialog()" style="display:none; position:fixed; inset:0; z-index:9998; background:rgba(28,26,24,0.45); align-items:center; justify-content:center; padding:16px;">
+  <div class="pdf-dialog" role="dialog" aria-modal="true" aria-labelledby="pdf-dialog-title">
+    <h3 id="pdf-dialog-title">匯出配置 PDF</h3>
+    <p class="pdf-dialog-sub">A4 · 300 dpi · 上方配置圖、下方配置清單</p>
+    <div class="pdf-orient-group">
+      <label class="pdf-orient-card"><input type="radio" name="pdf-orient" value="portrait" checked><span class="pdf-page-icon portrait"></span><span>直式</span></label>
+      <label class="pdf-orient-card"><input type="radio" name="pdf-orient" value="landscape"><span class="pdf-page-icon landscape"></span><span>橫式</span></label>
+    </div>
+    <div class="pdf-dialog-actions">
+      <button class="btn" onclick="closePdfExportDialog()">取消</button>
+      <button class="btn btn-primary" onclick="confirmPdfExport()">匯出 PDF</button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast">已成功複製與下載</div>
 
 <script>
@@ -4262,16 +4305,18 @@ function exportCSV() {
 // ==========================================
 // 7. 精確不失真：原生 2D Canvas 配置擷圖邏輯
 // ==========================================
-function captureCanvas() {
+function captureCanvas(opts) {
+  // opts（僅供 PDF 匯出使用）：{ padding, fit(contentW,contentH)->{w,h,dpr}, onCanvas(canvas) }
+  const _o = (opts && typeof opts === 'object' && 'onCanvas' in opts) ? opts : {};
   if (modules.length === 0) {
     showToast("畫布空白，無法截圖");
     return;
   }
 
-  showToast("正在生成高解析度平面圖...");
+  if (!_o.onCanvas) showToast("正在生成高解析度平面圖...");
 
-  const PADDING = 200; // 向外擴展 200 邏輯像素
-  const DPR = 2;       // 2 倍解析度輸出
+  const PADDING = (_o.padding != null) ? _o.padding : 200; // 向外擴展邏輯像素
+  let DPR = 2;       // 預設 2 倍解析度輸出
 
   // 1. 計算所有模塊旋轉後的實際邊界框
   //    對每個模塊取 4 個角點做旋轉，求整體最大外框
@@ -4318,10 +4363,19 @@ function captureCanvas() {
   });
 
   // 2. 加上 padding，得到擷圖範圍（邏輯像素）
-  const cropX = minX - PADDING;
-  const cropY = minY - PADDING;
-  const cropW = (maxX - minX) + PADDING * 2;
-  const cropH = (maxY - minY) + PADDING * 2;
+  let cropX = minX - PADDING;
+  let cropY = minY - PADDING;
+  let cropW = (maxX - minX) + PADDING * 2;
+  let cropH = (maxY - minY) + PADDING * 2;
+  if (typeof _o.fit === 'function') {
+    // fit(內容寬, 內容高) → { w, h, dpr }：以內容中心為準，把裁切範圍擴展成目標區塊比例
+    const r = _o.fit(cropW, cropH);
+    cropX = cropX + cropW / 2 - r.w / 2;
+    cropY = cropY + cropH / 2 - r.h / 2;
+    cropW = r.w;
+    cropH = r.h;
+    DPR = r.dpr;
+  }
 
   // 3. 建立高解析度 Canvas
   const exportCanvas = document.createElement('canvas');
@@ -4571,6 +4625,8 @@ function captureCanvas() {
       ctx.restore();
     });
 
+    if (_o.onCanvas) { _o.onCanvas(exportCanvas); return; }
+
     exportCanvas.toBlob(blob => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -4584,6 +4640,407 @@ function captureCanvas() {
     }, 'image/png');
   }
 }
+// ==========================================
+// 7b. 匯出配置 PDF（A4、300dpi、上：配置圖／下：配置清單）
+//     不依賴外部函式庫：整頁以 300dpi 繪製成圖後，以內建的簡易 PDF 寫入器封裝（可離線使用）
+// ==========================================
+let pdfOrientation = 'portrait';
+
+function openPdfExportDialog() {
+  if (modules.length === 0) {
+    showToast("畫布空白，無法匯出 PDF");
+    return;
+  }
+  document.querySelectorAll('input[name="pdf-orient"]').forEach(r => { r.checked = (r.value === pdfOrientation); });
+  document.getElementById('pdf-export-overlay').style.display = 'flex';
+}
+function closePdfExportDialog() {
+  document.getElementById('pdf-export-overlay').style.display = 'none';
+}
+function confirmPdfExport() {
+  const sel = document.querySelector('input[name="pdf-orient"]:checked');
+  pdfOrientation = sel ? sel.value : 'portrait';
+  closePdfExportDialog();
+  exportLayoutPDF(pdfOrientation);
+}
+document.addEventListener('keydown', (e) => {
+  const ov = document.getElementById('pdf-export-overlay');
+  if (e.key === 'Escape' && ov && ov.style.display !== 'none') closePdfExportDialog();
+});
+
+// 取得與目前「配置清單」一致的表格資料。
+// 每個儲存格 = 段落陣列；段落 = run 陣列：{t:文字} 或 {sw:色碼}（色塊，畫在其後第一個字之前）
+// 與 CSV 不同：椅背／坐墊顏色各自獨立成欄，不併入註記；屏風布號仍在註記，並附色塊
+function getPdfTableData() {
+  const P = (s) => String(s || '').split('\n').map(l => [{ t: l }]);
+  const colorCell = (color, label) => color ? [[{ sw: color }, { t: label || '' }]] : [[{ t: '' }]];
+  const noteCell = (o) => {
+    const paras = [];
+    if (o.customFabric) paras.push([{ t: '*訂製布色*' }]);
+    if (o.hasPartition) {
+      const row = (title, color, label) => {
+        if (!label) return;
+        const runs = [{ t: title }];
+        if (color) runs.push({ sw: color });
+        runs.push({ t: label });
+        paras.push(runs);
+      };
+      row('屏風內側布號:', o.innerColor, o.innerLabel);
+      row('屏風外側布號:', o.outerColor, o.outerLabel);
+    }
+    if (o.note) o.note.split('\n').forEach(l => paras.push([{ t: l }]));
+    if (o.socket) paras.push([{ t: '[加購插座組]' }]);
+    return paras.length ? paras : [[{ t: '' }]];
+  };
+
+  const headers = ['模塊名稱', '型號', '規格 (mm)', '數量', '椅背顏色', '坐墊顏色', '註記'];
+  const aligns  = ['left', 'left', 'left', 'center', 'left', 'left', 'left'];
+  let rows;
+
+  if (isAggregated) {
+    rows = buildAggregatedRows().map(g => {
+      const rep = modules.find(m => m.uid === g.uids[0]) || {};
+      let customFabric = false;
+      if (g.hasPartition) {
+        customFabric = (g.backLabel || '') !== (g.partitionOuterLabel || '') ||
+                       (g.seatLabel || '') !== (g.partitionInnerLabel || '');
+      }
+      return {
+        cells: [
+          P(g.name), P(g.id), P(g.spec), P(String(g.qty)),
+          colorCell(g.backColor, g.backLabel),
+          colorCell(g.seatColor, g.seatLabel),
+          noteCell({
+            customFabric, hasPartition: g.hasPartition,
+            innerColor: rep.partitionInnerColor, innerLabel: g.partitionInnerLabel,
+            outerColor: rep.partitionOuterColor, outerLabel: g.partitionOuterLabel,
+            note: g.cleanNote, socket: g.socketQtyTotal > 0
+          })
+        ]
+      };
+    });
+    const totalSocketQty = modules.reduce((sum, m) => sum + (m.socketQty || 0), 0);
+    if (totalSocketQty > 0) {
+      rows.push({
+        cells: [P('加購插座組'), P('SP-17-A01'), P(''), P(String(totalSocketQty)), P(''), P(''), P('')],
+        bg: '#FFFBEA'
+      });
+    }
+  } else {
+    rows = modules.map(mod => ({
+      cells: [
+        P(mod.name),
+        P(mod.isCustom ? '' : (mod.id === 'SP-17-ST' ? '' : mod.id)),
+        P(mod.spec || `${mod.width}*${mod.height}`),
+        P('1'),
+        colorCell(mod.backColor, mod.backLabel),
+        colorCell(mod.seatColor, mod.seatLabel),
+        noteCell({
+          hasPartition: !!mod.hasPartition,
+          innerColor: mod.partitionInnerColor, innerLabel: mod.partitionInnerLabel,
+          outerColor: mod.partitionOuterColor, outerLabel: mod.partitionOuterLabel,
+          note: mod.note.split(SOCKET_NOTE_SEPARATOR).join('').trim(),
+          socket: mod.note.includes(SOCKET_NOTE_SEPARATOR)
+        })
+      ]
+    }));
+  }
+  return { headers, aligns, rows };
+}
+
+function exportLayoutPDF(orientation) {
+  if (modules.length === 0) {
+    showToast("畫布空白，無法匯出 PDF");
+    return;
+  }
+  const landscape = orientation === 'landscape';
+  const DPI = 300;
+  const MM  = DPI / 25.4;                                  // 1mm = 11.811px
+  const PW  = Math.round((landscape ? 297 : 210) * MM);    // 頁寬 px
+  const PH  = Math.round((landscape ? 210 : 297) * MM);    // 頁高 px
+  const MARGIN = Math.round(10 * MM);
+  const boxW = PW - MARGIN * 2;
+  const GAP = Math.round(5 * MM);
+  const MIN_IMG_H = Math.round((PH - MARGIN * 2) * 0.35);  // 配置圖區至少佔可用高度的 35%
+
+  // ── 表格字型：微軟正黑體 10pt（300dpi 下 ≈ 42px）──
+  const FONT_PX = Math.round(10 / 72 * DPI);
+  const FAMILY  = '"Microsoft JhengHei","微軟正黑體","PingFang TC",sans-serif';
+  const FONT    = `${FONT_PX}px ${FAMILY}`;
+  const FONT_B  = `bold ${FONT_PX}px ${FAMILY}`;
+  const LINE_H  = Math.round(FONT_PX * 1.4);
+  const PAD_X   = Math.round(1.6 * MM);
+  const PAD_Y   = Math.round(1.5 * MM);
+  const SW      = Math.round(FONT_PX * 0.8);               // 色塊邊長
+  const SWGAP   = Math.round(FONT_PX * 0.25);              // 色塊與文字間距
+  const LINE_C  = '#8A8680';
+  const TEXT_C  = '#1C1A18';
+
+  showToast("正在生成 PDF（300dpi）...");
+
+  const mctx = document.createElement('canvas').getContext('2d');
+
+  // 段落 → 原子（逐字；色塊綁在其後第一個字上，避免色塊與色號被拆行）
+  const atomsOf = (para) => {
+    const atoms = [];
+    let pend = null;
+    para.forEach(run => {
+      if (run.sw) { pend = run.sw; return; }
+      for (const ch of run.t) {
+        const w = mctx.measureText(ch).width;
+        if (pend) { atoms.push({ sw: pend, t: ch, w: w + SW + SWGAP }); pend = null; }
+        else atoms.push({ t: ch, w });
+      }
+    });
+    if (pend) atoms.push({ sw: pend, t: '', w: SW });
+    return atoms;
+  };
+  const sumW = (atoms) => atoms.reduce((s, a) => s + a.w, 0);
+  const wrapAtoms = (paraAtoms, maxW) => {
+    const lines = [];
+    paraAtoms.forEach(atoms => {
+      let line = [], cw = 0;
+      atoms.forEach(a => {
+        if (line.length && cw + a.w > maxW) { lines.push(line); line = []; cw = 0; }
+        line.push(a); cw += a.w;
+      });
+      lines.push(line);
+    });
+    return lines.length ? lines : [[]];
+  };
+
+  const { headers, aligns, rows } = getPdfTableData();
+  const ncol = headers.length;
+  const noteIdx = ncol - 1;
+
+  mctx.font = FONT_B;
+  const headAtoms = headers.map(h => atomsOf([{ t: h }]));
+  mctx.font = FONT;
+  const rowAtoms = rows.map(r => r.cells.map(paras => paras.map(atomsOf)));
+
+  // ── 欄寬：型號／規格／數量／顏色欄依內容寬度且不換行；模塊名稱與註記欄彈性分配剩餘寬度 ──
+  const colW = headAtoms.map(a => Math.ceil(sumW(a)));
+  rowAtoms.forEach(r => r.forEach((paraAtoms, i) => {
+    if (i === noteIdx) return;
+    paraAtoms.forEach(at => { colW[i] = Math.max(colW[i], Math.ceil(sumW(at))); });
+  }));
+  for (let i = 0; i < ncol; i++) colW[i] += PAD_X * 2;
+
+  const nameNatural = colW[0];
+  const fixedIdx = [];
+  for (let i = 1; i < noteIdx; i++) fixedIdx.push(i);
+  let sumFixed = fixedIdx.reduce((s, i) => s + colW[i], 0);
+  const minFlex = Math.round(boxW * 0.30);
+  if (boxW - sumFixed < minFlex) {
+    const f = (boxW - minFlex) / sumFixed;
+    fixedIdx.forEach(i => { colW[i] = Math.floor(colW[i] * f); });
+    sumFixed = fixedIdx.reduce((s, i) => s + colW[i], 0);
+  }
+  const flexW = boxW - sumFixed;
+  colW[0] = Math.min(nameNatural, Math.round(flexW * 0.45));
+  colW[noteIdx] = boxW - sumFixed - colW[0];
+
+  // ── 各列換行與列高 ──
+  const items = rows.map((r, ri) => {
+    const lines = rowAtoms[ri].map((paraAtoms, i) => wrapAtoms(paraAtoms, colW[i] - PAD_X * 2));
+    const n = Math.max(...lines.map(l => l.length));
+    return { row: r, lines, h: n * LINE_H + PAD_Y * 2 };
+  });
+  const headerH = LINE_H + PAD_Y * 2;
+
+  // ── 分頁：第 1 頁「配置圖在上、表格靠下對齊」；過長時其餘列接續到後續頁（從頁首開始、重複表頭）──
+  const pages = [];
+  let cur = { y0: 0, items: [] };
+  let y = MARGIN + MIN_IMG_H + GAP + headerH;
+  items.forEach(it => {
+    if (y + it.h > PH - MARGIN && cur.items.length > 0) {
+      pages.push(cur);
+      cur = { y0: MARGIN, items: [] };
+      y = MARGIN + headerH;
+    }
+    cur.items.push(it);
+    y += it.h;
+  });
+  pages.push(cur);
+
+  // 第 1 頁表格貼齊頁面下緣；表格以外的空間全部留給配置圖
+  const H1 = headerH + pages[0].items.reduce((s, it) => s + it.h, 0);
+  pages[0].y0 = PH - MARGIN - H1;
+  const imgX = MARGIN, imgY = MARGIN, imgW = boxW;
+  const imgH = pages[0].y0 - GAP - MARGIN;
+
+  // 配置圖：以內容中心置中，裁切範圍依區塊比例自動擴展 → 上下左右留白自動均分，格點底圖填滿整個區塊
+  // （放大倍率上限 10，避免極小配置被過度放大）
+  captureCanvas({
+    padding: 30,
+    fit: (cw, ch) => {
+      const s = Math.min(imgW / cw, imgH / ch, 10);
+      return { w: imgW / s, h: imgH / s, dpr: s };
+    },
+    onCanvas: (shot) => {
+      renderPages(shot).catch(err => {
+        console.error(err);
+        showToast("PDF 匯出失敗：" + (err && err.message ? err.message : err));
+      });
+    }
+  });
+
+  async function renderPages(shot) {
+    const jpegs = [];
+    for (let p = 0; p < pages.length; p++) {
+      const pg = pages[p];
+      const cv = document.createElement('canvas');
+      cv.width = PW; cv.height = PH;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, PW, PH);
+
+      if (p === 0) {
+        ctx.drawImage(shot, imgX, imgY, imgW, imgH);
+        ctx.strokeStyle = LINE_C; ctx.lineWidth = 2;
+        ctx.strokeRect(imgX, imgY, imgW, imgH);
+      }
+
+      const x0 = MARGIN;
+      let ty = pg.y0;
+      const tableTop = ty;
+
+      // 繪製一列文字（含色塊）
+      const drawRow = (cellLines, bold) => {
+        ctx.font = bold ? FONT_B : FONT;
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'left';
+        let cx = x0;
+        for (let i = 0; i < ncol; i++) {
+          cellLines[i].forEach((atoms, k) => {
+            const ly = ty + PAD_Y + k * LINE_H + LINE_H / 2;
+            const lw = sumW(atoms);
+            let ax = aligns[i] === 'center' ? cx + (colW[i] - lw) / 2 : cx + PAD_X;
+            atoms.forEach(a => {
+              let tx = ax;
+              if (a.sw) {
+                ctx.fillStyle = a.sw;
+                ctx.fillRect(ax, ly - SW / 2, SW, SW);
+                ctx.strokeStyle = '#666';
+                ctx.lineWidth = 1.5;
+                ctx.strokeRect(ax, ly - SW / 2, SW, SW);
+                tx += SW + SWGAP;
+              }
+              if (a.t) { ctx.fillStyle = TEXT_C; ctx.fillText(a.t, tx, ly); }
+              ax += a.w;
+            });
+          });
+          cx += colW[i];
+        }
+      };
+
+      // 表頭
+      ctx.fillStyle = '#EFEDEA';
+      ctx.fillRect(x0, ty, boxW, headerH);
+      drawRow(headAtoms.map(a => [a]), true);
+      ty += headerH;
+      const rowBottoms = [ty];
+
+      // 內容列
+      pg.items.forEach(it => {
+        if (it.row.bg) {
+          ctx.fillStyle = it.row.bg;
+          ctx.fillRect(x0, ty, boxW, it.h);
+        }
+        drawRow(it.lines, false);
+        ty += it.h;
+        rowBottoms.push(ty);
+      });
+      const tableBottom = ty;
+
+      // 格線
+      ctx.strokeStyle = LINE_C;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.rect(x0, tableTop, boxW, tableBottom - tableTop);
+      rowBottoms.forEach(by => { ctx.moveTo(x0, by); ctx.lineTo(x0 + boxW, by); });
+      let vx = x0;
+      for (let i = 0; i < ncol - 1; i++) {
+        vx += colW[i];
+        ctx.moveTo(vx, tableTop); ctx.lineTo(vx, tableBottom);
+      }
+      ctx.stroke();
+
+      const bytes = await new Promise((resolve, reject) => {
+        cv.toBlob(b => {
+          if (!b) { reject(new Error('頁面轉檔失敗')); return; }
+          b.arrayBuffer().then(buf => resolve(new Uint8Array(buf)), reject);
+        }, 'image/jpeg', 0.95);
+      });
+      jpegs.push({ bytes, w: PW, h: PH });
+      cv.width = 0; cv.height = 0;
+    }
+
+    const pdfBlob = makePdfFromJpegs(jpegs, landscape ? 841.89 : 595.28, landscape ? 595.28 : 841.89);
+    const url = URL.createObjectURL(pdfBlob);
+    const link = document.createElement('a');
+    link.download = `AGORA_Sofa_Layout_${Date.now()}.pdf`;
+    link.href = url;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    showToast(`配置 PDF 匯出完成（${pages.length} 頁）`);
+  }
+}
+
+// 簡易 PDF 寫入器：每頁一張 JPEG（DCTDecode）鋪滿整頁；pageW/pageH 單位為 pt
+function makePdfFromJpegs(pages, pageW, pageH) {
+  const enc = new TextEncoder();
+  const chunks = [];
+  const offsets = [];
+  let pos = 0;
+  const push = (d) => {
+    const u = (typeof d === 'string') ? enc.encode(d) : d;
+    chunks.push(u);
+    pos += u.length;
+  };
+  const beginObj = (n) => { offsets[n] = pos; push(`${n} 0 obj\n`); };
+  const endObj = () => push('endobj\n');
+  const f2 = (n) => n.toFixed(2);
+
+  const n = pages.length;
+  const totalObjs = 2 + n * 3;
+  push('%PDF-1.4\n%\u00E2\u00E3\u00CF\u00D3\n');
+
+  beginObj(1); push('<< /Type /Catalog /Pages 2 0 R >>\n'); endObj();
+  const kids = pages.map((_, i) => `${3 + i * 3} 0 R`).join(' ');
+  beginObj(2); push(`<< /Type /Pages /Kids [${kids}] /Count ${n} >>\n`); endObj();
+
+  pages.forEach((pg, i) => {
+    const pageObj = 3 + i * 3, imgObj = 4 + i * 3, contObj = 5 + i * 3;
+    beginObj(pageObj);
+    push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${f2(pageW)} ${f2(pageH)}] /Resources << /XObject << /Im0 ${imgObj} 0 R >> >> /Contents ${contObj} 0 R >>\n`);
+    endObj();
+
+    beginObj(imgObj);
+    push(`<< /Type /XObject /Subtype /Image /Width ${pg.w} /Height ${pg.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${pg.bytes.length} >>\nstream\n`);
+    push(pg.bytes);
+    push('\nendstream\n');
+    endObj();
+
+    const content = `q\n${f2(pageW)} 0 0 ${f2(pageH)} 0 0 cm\n/Im0 Do\nQ\n`;
+    beginObj(contObj);
+    push(`<< /Length ${enc.encode(content).length} >>\nstream\n${content}endstream\n`);
+    endObj();
+  });
+
+  const xrefPos = pos;
+  let xref = `xref\n0 ${totalObjs + 1}\n0000000000 65535 f \n`;
+  for (let i = 1; i <= totalObjs; i++) {
+    xref += String(offsets[i]).padStart(10, '0') + ' 00000 n \n';
+  }
+  push(xref);
+  push(`trailer\n<< /Size ${totalObjs + 1} /Root 1 0 R >>\nstartxref\n${xrefPos}\n%%EOF\n`);
+
+  return new Blob(chunks, { type: 'application/pdf' });
+}
+
 // ==========================================
 // 複製選取模塊（Ctrl+D）
 // ==========================================
@@ -6556,6 +7013,11 @@ function showToast(msg) {
         <span class="card-icon">📷</span>
         <h3>擷取配置圖（PNG）</h3>
         <p>點頂部「📷 擷取配置圖」，截取目前畫布並自動下載為 <code>.png</code>。圖片包含所有模塊、顏色、訂製模塊的寬度標注、空間範圍，以及「自動標注」產生的沙發組總長寬標注，可直接附於提案文件。</p>
+      </div>
+      <div class="card">
+        <span class="card-icon">📄</span>
+        <h3>匯出配置 PDF</h3>
+        <p>點「📄 匯出配置PDF」（位於「擷取配置圖」左側），選擇 <strong>直式</strong> 或 <strong>橫式</strong> 後匯出 A4、300dpi 的 <code>.pdf</code>。表格（微軟正黑體 10pt）靠頁面下緣對齊，其餘空間全部留給上方的配置圖，圖面留白會自動調整。表格含「椅背顏色」「坐墊顏色」欄，色號前附色塊；屏風布號在註記欄，同樣附色塊。內容與目前清單的檢視模式一致（明細／彙整型號）；清單過長時會自動接續到下一頁並重複表頭。</p>
       </div>
       <div class="card">
         <span class="card-icon">📁</span>
