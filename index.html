@@ -4158,7 +4158,14 @@ function saveProject() {
       backLabel:  mod.backLabel,
       note:       mod.note,
       socketQty:  mod.socketQty || 0,
-      isCustom:   mod.isCustom || false
+      isCustom:   mod.isCustom || false,
+      // 屏風狀態（_baseId 為加屏風前的原始型號，載入後清單才判斷得出可加屏風）
+      hasPartition:        !!mod.hasPartition,
+      _baseId:             mod._baseId || undefined,
+      partitionInnerColor: mod.partitionInnerColor,
+      partitionOuterColor: mod.partitionOuterColor,
+      partitionInnerLabel: mod.partitionInnerLabel || '',
+      partitionOuterLabel: mod.partitionOuterLabel || ''
     }))
   };
 
@@ -4227,6 +4234,18 @@ function loadProject(event) {
           CUSTOM_SVG[saved.id] = buildCustomStraightSVG(wMm, bType);
         }
       }
+      // ── 屏風狀態還原（含舊版專案檔相容）──
+      // 舊版檔案未存屏風欄位，但型號已是屏風型號（…BPS）→ 視為已加屏風，並反查原始型號
+      let hasPartition = !!saved.hasPartition;
+      let baseId = saved._baseId;
+      const legacyPartition = !hasPartition && PARTITION_MODEL_IDS.has(saved.id);
+      if (legacyPartition) hasPartition = true;
+      if (hasPartition && !baseId) {
+        baseId = Object.keys(PARTITION_MAP).find(k => PARTITION_MAP[k].partitionId === saved.id);
+      }
+      const seatColorLoaded = saved.seatColor || DEFAULT_SEAT_COLOR;
+      const backColorLoaded = saved.backColor ?? DEFAULT_BACK_COLOR;
+
       // 以 uid 為準保留原始識別碼（避免拖曳衝突）
       const mod = {
         uid:       saved.uid,
@@ -4244,7 +4263,14 @@ function loadProject(event) {
         backLabel: saved.backLabel || '',
         note:      saved.note || '',
         socketQty: (saved.id === 'SP-17-RPS' || saved.id === 'SP-17-ST') ? 0 : (saved.socketQty || 0),
-        isCustom:  saved.isCustom || false
+        isCustom:  saved.isCustom || false,
+        hasPartition: hasPartition,
+        _baseId:      hasPartition ? baseId : undefined,
+        // 舊檔案無屏風色票／布號 → 與勾選屏風時一致：內側＝坐墊、外側＝椅背
+        partitionInnerColor: saved.partitionInnerColor || (legacyPartition ? seatColorLoaded : DEFAULT_PARTITION_INNER_COLOR),
+        partitionOuterColor: saved.partitionOuterColor || (legacyPartition ? (backColorLoaded || DEFAULT_BACK_COLOR) : DEFAULT_PARTITION_OUTER_COLOR),
+        partitionInnerLabel: saved.partitionInnerLabel ?? (legacyPartition ? (saved.seatLabel || '') : ''),
+        partitionOuterLabel: saved.partitionOuterLabel ?? (legacyPartition ? (saved.backLabel || '') : '')
       };
       modules.push(mod);
       renderModuleDOM(mod);
@@ -5126,7 +5152,15 @@ function duplicateSelected() {
       backColor: mod.backColor,
       backLabel: mod.backLabel,
       seatLabel: mod.seatLabel,
-      socketQty: (mod.id === 'SP-17-RPS' || mod.id === 'SP-17-ST') ? 0 : (mod.socketQty || 0)
+      socketQty: (mod.id === 'SP-17-RPS' || mod.id === 'SP-17-ST') ? 0 : (mod.socketQty || 0),
+      isCustom:  mod.isCustom || false,
+      // 屏風狀態一併複製
+      hasPartition:        !!mod.hasPartition,
+      _baseId:             mod._baseId,
+      partitionInnerColor: mod.partitionInnerColor,
+      partitionOuterColor: mod.partitionOuterColor,
+      partitionInnerLabel: mod.partitionInnerLabel || '',
+      partitionOuterLabel: mod.partitionOuterLabel || ''
     };
     modules.push(copy);
     renderModuleDOM(copy);
