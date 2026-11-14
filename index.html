@@ -2370,6 +2370,12 @@ function createDimAnnotation(mod) {
  * 更新訂製模塊寬度標註的 SVG 內容。
  * 標註定位由 CSS 控制（top: -22px; left: 0），不需要手動設定座標。
  */
+// 模塊旋轉角度落在 (90°, 270°) 時，標注文字會上下顛倒 → 需額外轉 180° 保持可讀
+function isDimTextUpsideDown(rotateDeg) {
+  const r = ((rotateDeg % 360) + 360) % 360;
+  return r > 90 && r < 270;
+}
+
 function updateDimAnnotation(mod) {
   if (!mod.isCustom) return;
   const el = document.getElementById(`dim-${mod.uid}`);
@@ -2400,6 +2406,7 @@ function updateDimAnnotation(mod) {
   <line x1="${wPx - ARROW}" y1="${y + ARROW/2}" x2="${wPx}" y2="${y}" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>
   <!-- 數字標籤（白底描邊增加可讀性） -->
   <text x="${wPx/2}" y="${y + 4}" text-anchor="middle"
+        ${isDimTextUpsideDown(mod.rotate) ? `transform="rotate(180, ${wPx/2}, ${y})"` : ''}
         font-family="Microsoft JhengHei, PingFang TC, sans-serif"
         font-size="11" font-weight="bold" fill="#333"
         paint-order="stroke" stroke="white" stroke-width="3" stroke-linejoin="round">
@@ -2500,6 +2507,7 @@ function updateModuleDOMPosition(mod) {
     div.style.left = `${mod.x}px`;
     div.style.top = `${mod.y}px`;
     div.style.transform = `rotate(${mod.rotate}deg)`;
+    if (mod.isCustom) updateDimAnnotation(mod);  // 旋轉後文字可能需翻正
   }
 
 }
@@ -4524,10 +4532,13 @@ function captureCanvas(opts) {
       // 數字標籤
       ctx.font = 'bold 11px "Microsoft JhengHei","PingFang TC",sans-serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      // 模塊朝向使文字上下顛倒時，以標注中心為軸翻轉 180° 保持可讀
+      ctx.translate(midX, annotY);
+      if (isDimTextUpsideDown(mod.rotate)) ctx.rotate(Math.PI);
       ctx.lineWidth = 3; ctx.strokeStyle = 'white';
-      ctx.strokeText(`${mod.width}`, midX, annotY);
+      ctx.strokeText(`${mod.width}`, 0, 0);
       ctx.fillStyle = DIM_C;
-      ctx.fillText(`${mod.width}`, midX, annotY);
+      ctx.fillText(`${mod.width}`, 0, 0);
 
       ctx.restore();
     });
