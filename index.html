@@ -1322,6 +1322,7 @@ tr.multi-selected-row td {
         <button class="btn btn-icon-responsive" style="padding: 4px 9px; font-size: 12px; font-weight: bold; border-color: var(--text-secondary); color: var(--text-secondary);" onclick="openManual()" title="開啟操作說明"><span class="material-icons btn-icon-only" style="font-size:20px;vertical-align:middle;color:var(--text-secondary);">menu_book</span><span class="btn-label-text">📖 操作說明</span></button>
         <button class="btn" style="padding: 4px 12px; font-size: 12px; font-weight: bold; border-color: #3a8a3a; color: #3a8a3a;" onclick="saveProject()" title="將目前配置儲存為 .agora 專案檔">💾 儲存專案</button>
         <label class="btn" style="padding: 4px 12px; font-size: 12px; font-weight: bold; border-color: #3a8a3a; color: #3a8a3a; cursor: pointer; margin: 0;" title="載入先前儲存的 .agora 專案檔">📂 載入專案<input type="file" id="loadProjectInput" accept=".agora" style="display:none;" onchange="loadProject(event)"></label>
+        <button class="btn" id="showroomBtn" style="padding: 4px 12px; font-size: 12px; font-weight: bold; border-color: #3a8a3a; color: #3a8a3a;" onclick="loadShowroomProject()" title="一鍵載入預設的展廳配置（AGORA_展廳.agora）">🏬 一鍵展廳配置</button>
       </div>
       <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
         <div class="icon-btn-group" style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
@@ -4203,8 +4204,40 @@ function loadProject(event) {
       alert("檔案格式錯誤，請選擇有效的 .agora 專案檔。");
       return;
     }
+    applyProjectData(data, '專案');
+  };
+  reader.readAsText(file);
+}
 
-    if (!data.version || !Array.isArray(data.modules)) {
+// 一鍵展廳配置：讀取與網頁放在同一資料夾（GitHub Pages repo）的 .agora 檔
+const SHOWROOM_PROJECT_FILE = 'AGORA_展廳.agora';
+
+async function loadShowroomProject() {
+  const btn = document.getElementById('showroomBtn');
+  let data;
+  try {
+    if (btn) btn.disabled = true;
+    // 以相對路徑讀取；加時間參數避開瀏覽器／CDN 快取，更新 repo 內檔案後立即生效
+    const url = encodeURIComponent(SHOWROOM_PROJECT_FILE) + '?t=' + Date.now();
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    data = JSON.parse(await res.text());
+  } catch (err) {
+    console.error(err);
+    alert('無法讀取展廳配置檔「' + SHOWROOM_PROJECT_FILE + '」。\n\n' +
+          '請確認：\n1. 檔案已放在與本網頁相同的資料夾（檔名需完全相同）\n' +
+          '2. 是透過網址（GitHub Pages）開啟，而非直接雙擊 .html 檔\n\n（' + (err && err.message ? err.message : err) + '）');
+    return;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+  applyProjectData(data, '展廳配置');
+}
+
+// 將專案資料（已解析的 JSON）套用到畫布；供「載入專案」與「一鍵展廳配置」共用
+function applyProjectData(data, label) {
+  {
+    if (!data || !data.version || !Array.isArray(data.modules)) {
       alert("檔案格式不符，無法載入。");
       return;
     }
@@ -4280,9 +4313,8 @@ function loadProject(event) {
 
     renderTable();
     updateEmptyHint();
-    showToast(`已載入專案（${modules.length} 個模塊）`);
-  };
-  reader.readAsText(file);
+    showToast(`已載入${label || '專案'}（${modules.length} 個模塊）`);
+  }
 }
 
 function exportCSV() {
@@ -7036,6 +7068,7 @@ function showToast(msg) {
         <div class="step-body">
           <strong>📂 載入專案</strong>
           <p>選取先前儲存的 <code>.agora</code> 檔案，還原所有配置。</p>
+        <p>「🏬 一鍵展廳配置」會直接載入網站內建的展廳配置（<code>AGORA_展廳.agora</code>），不需要自己選檔。</p>
         </div>
       </div>
     </div>
